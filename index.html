@@ -321,6 +321,8 @@ function todayISO(){ return '2026-09-13'; } // fixed "today" for this dashboard 
 function d(day,date,type,title,note,off){ return {day,date,type,title,note,off}; }
 
 const PILATES_CHAIR = d(null,null,'pilates','Pilates — Chair','Chair ALL LV · Coach Nanda · 17.00 · glute & single-leg work, swapped in for strength day',null);
+const PILATES_REFORMER = d(null,null,'pilates','Pilates — Reformer','Reformer ALL LV · Coach Nanda · 15.00 · full-body resistance, note: earlier than your usual 17.00',null);
+const PILATES_CORE = d(null,null,'pilates','Pilates — Core','Core LV2 · Coach Xinxin · 11.00 · only Core slot all week — different time & level than usual',null);
 const PILATES_STRETCH = d(null,null,'pilates','Pilates — Stretch','Stretch ALL LV · Coach Nanda · 18.00 · swapped in for this week\'s mobility session',null);
 
 const JRF_5K_WEEKS = [
@@ -368,7 +370,7 @@ const JRF_5K_WEEKS = [
   d('Sun','2026-09-13','run','Easy Long Run 13K','1:45/km slower than 5K pace',105) ],
 [ d('Mon','2026-09-14','rest','Rest','Carbo-load, hydrate, early night',null),
   d('Tue','2026-09-15','run','Interval Training','1000m x5, rest 3 min, 25s/km faster than 5K pace',-25),
-  {...PILATES_CHAIR, day:'Wed', date:'2026-09-16'},
+  {...PILATES_REFORMER, day:'Wed', date:'2026-09-16'},
   d('Thu','2026-09-17','run','Easy Run 6K','1:30/km slower than 5K pace',90),
   d('Fri','2026-09-18','run','Medium Run 8K','1:00/km slower than 5K pace',60),
   d('Sat','2026-09-19','run','5K Recovery Run','Easy jog, conversational effort',null),
@@ -382,7 +384,7 @@ const JRF_5K_WEEKS = [
   d('Sun','2026-09-27','run','Easy Long Run 10K','1:45/km slower than 5K pace',105) ],
 [ d('Mon','2026-09-28','rest','Rest','Carbo-load, hydrate, early night',null),
   d('Tue','2026-09-29','run','Threshold','3K x2, rest 3 min, 25s/km slower than 5K pace',25),
-  {...PILATES_CHAIR, day:'Wed', date:'2026-09-30'},
+  {...PILATES_CORE, day:'Wed', date:'2026-09-30'},
   d('Thu','2026-10-01','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
   d('Fri','2026-10-02','run','Easy Run 6K','1:30/km slower than 5K pace',90),
   d('Sat','2026-10-03','run','5K Recovery Run','Easy jog, conversational effort',null),
