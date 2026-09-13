@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arunner — Race Training Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FFF8F1;
+    --cream-2:#FFF1E4;
+    --coral:#FF6B7A;
+    --coral-deep:#E8536A;
+    --teal:#1FADA0;
+    --teal-deep:#128074;
+    --plum:#3A2E39;
+    --plum-soft:#6E5E6C;
+    --gold:#FFB84D;
+    --line:#EFE1D3;
+    --card:#FFFFFF;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:9px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--cream);color:var(--plum);font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Fraunces',serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+
+  /* Top bar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--coral),var(--gold));display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:#fff;font-size:18px;transform:rotate(-6deg);}
+  .brand .name{font-family:'Fraunces',serif;font-size:20px;font-weight:600;letter-spacing:-0.2px;}
+  .brand .sub{font-size:12px;color:var(--plum-soft);margin-top:-2px;}
+  .topbar-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:999px;transition:transform .15s ease, box-shadow .15s ease;}
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:var(--plum);color:#fff;}
+  .btn-primary:hover{box-shadow:0 6px 16px rgba(58,46,57,.25);}
+  .btn-ghost{background:#fff;color:var(--plum);border:1.5px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--coral);color:var(--coral-deep);}
+  .btn-sm{padding:6px 12px;font-size:12.5px;}
+
+  /* Race tabs */
+  .race-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:22px;}
+  .race-tab{white-space:nowrap;padding:9px 16px;border-radius:999px;background:#fff;border:1.5px solid var(--line);font-weight:600;font-size:13.5px;cursor:pointer;color:var(--plum-soft);}
+  .race-tab.active{background:var(--plum);color:#fff;border-color:var(--plum);}
+  .race-tab.addnew{background:var(--cream-2);border-style:dashed;color:var(--coral-deep);}
+
+  /* Hero */
+  .hero{background:linear-gradient(135deg,var(--coral) 0%, #FF8FA0 55%, var(--gold) 130%);border-radius:var(--radius-lg);padding:32px 32px 28px;color:#fff;position:relative;overflow:hidden;margin-bottom:24px;}
+  .hero::after{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.14);}
+  .hero::before{content:'';position:absolute;right:60px;bottom:-90px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.10);}
+  .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;position:relative;z-index:1;}
+  .hero-cat{display:inline-block;background:rgba(255,255,255,.25);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.3px;margin-bottom:10px;}
+  .hero h1{font-size:30px;margin:0 0 4px;font-weight:600;}
+  .hero .date{font-size:14px;opacity:.9;}
+  .countdown{text-align:right;}
+  .countdown .num{font-family:'Fraunces',serif;font-size:44px;font-weight:700;line-height:1;}
+  .countdown .lbl{font-size:12.5px;opacity:.9;}
+  .hero-stats{display:flex;gap:28px;margin-top:26px;flex-wrap:wrap;position:relative;z-index:1;}
+  .hstat{min-width:110px;}
+  .hstat .v{font-family:'Fraunces',serif;font-size:22px;font-weight:600;}
+  .hstat .k{font-size:12px;opacity:.9;}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;align-items:start;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;margin-bottom:22px;}
+  .card h2{font-size:18px;margin:0 0 4px;font-weight:600;}
+  .card .desc{font-size:13px;color:var(--plum-soft);margin-bottom:16px;}
+
+  /* Week pills */
+  .week-pills{display:flex;gap:7px;overflow-x:auto;padding:6px 5px 10px;margin-bottom:16px;}
+  .wpill{flex:0 0 auto;width:46px;height:46px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid var(--line);background:#fff;font-size:11px;font-weight:700;color:var(--plum-soft);}
+  .wpill .n{font-size:14px;}
+  .wpill.done{background:var(--cream-2);border-color:var(--teal);color:var(--teal-deep);}
+  .wpill.current{background:var(--plum);border-color:var(--plum);color:#fff;}
+  .wpill.active-sel{outline:2.5px solid var(--coral);outline-offset:2px;}
+
+  .daylist{display:flex;flex-direction:column;gap:8px;}
+  .daycard{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--radius-md);border:1.5px solid var(--line);background:#fff;cursor:pointer;}
+  .daycard:hover{border-color:var(--coral);}
+  .daycard .dnum{text-align:center;}
+  .daycard .dnum .dow{font-size:11px;font-weight:700;color:var(--plum-soft);}
+  .daycard .dnum .dd{font-family:'Fraunces',serif;font-size:19px;font-weight:700;line-height:1.15;}
+  .daycard .dnum .dm{font-size:10.5px;font-weight:600;color:var(--plum-soft);text-transform:uppercase;letter-spacing:.4px;margin-top:1px;}
+  .daycard .title{font-weight:700;font-size:14px;}
+  .daycard .note{font-size:12px;color:var(--plum-soft);margin-top:2px;}
+  .tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.3px;padding:3px 8px;border-radius:6px;margin-right:6px;}
+  .tag-run{background:#FFE3E7;color:var(--coral-deep);}
+  .tag-strength{background:#DFF4F1;color:var(--teal-deep);}
+  .tag-rest{background:#F1ECF0;color:var(--plum-soft);}
+  .tag-race{background:#FFEFC7;color:#8A6200;}
+  .tag-pilates{background:#EDE1FB;color:#6B3FA0;}
+  .logged-badge{font-size:11px;font-weight:700;color:var(--teal-deep);background:#E4F7F4;padding:4px 9px;border-radius:999px;white-space:nowrap;}
+  .swap-badge{font-size:11px;color:var(--coral-deep);font-weight:700;}
+
+  /* Prediction/target panel */
+  .modetabs{display:flex;background:var(--cream-2);border-radius:999px;padding:4px;margin-bottom:18px;}
+  .modetab{flex:1;text-align:center;padding:9px 0;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;color:var(--plum-soft);}
+  .modetab.active{background:#fff;color:var(--coral-deep);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+  .pred-number{text-align:center;padding:14px 0 6px;}
+  .pred-number .val{font-family:'Fraunces',serif;font-size:42px;font-weight:700;color:var(--coral-deep);}
+  .pred-number .sub{font-size:12.5px;color:var(--plum-soft);}
+  .method-box{background:var(--cream-2);border-radius:var(--radius-md);padding:14px 16px;font-size:12.5px;color:var(--plum-soft);line-height:1.55;margin-top:14px;}
+  .method-box b{color:var(--plum);}
+  .goal-input{display:flex;gap:8px;margin-bottom:14px;}
+  .goal-input input{flex:1;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;font-family:'Fraunces',serif;font-weight:600;color:var(--plum);text-align:center;}
+  .goal-input span{align-self:center;font-size:12px;color:var(--plum-soft);}
+  table.pacetable{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+  table.pacetable th{text-align:left;color:var(--plum-soft);font-weight:700;font-size:11px;padding:6px 4px;border-bottom:1.5px solid var(--line);}
+  table.pacetable td{padding:7px 4px;border-bottom:1px solid var(--line);}
+  table.pacetable td.p{font-weight:700;color:var(--teal-deep);}
+
+  /* Log */
+  .logrow{display:grid;grid-template-columns:70px 1fr 80px 90px 90px 30px;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .logrow.head{font-weight:800;color:var(--plum-soft);font-size:11px;border-bottom:1.5px solid var(--plum);}
+  .logrow input{border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12.5px;width:100%;font-family:inherit;}
+  .del-x{cursor:pointer;color:var(--coral-deep);font-weight:800;text-align:center;}
+  .match-ok{color:var(--teal-deep);font-weight:700;}
+  .match-off{color:var(--gold);font-weight:700;}
+  .match-none{color:var(--plum-soft);}
+
+  .insight{background:var(--cream-2);border-radius:var(--radius-md);padding:16px 18px;font-size:13px;line-height:1.6;color:var(--plum);}
+  .insight b{color:var(--coral-deep);}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(58,46,57,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:var(--radius-lg);padding:26px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;}
+  .modal h3{margin:0 0 14px;font-size:19px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--plum-soft);margin-bottom:6px;}
+  .field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:9px 11px;font-size:14px;font-family:inherit;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+
+  footer{text-align:center;font-size:12px;color:var(--plum-soft);margin-top:30px;}
+  a{color:inherit;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">A</div>
+      <div>
+        <div class="name">Arunner</div>
+        <div class="sub">race training dashboard · by Arsya Amalia</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btnCloudSetup">☁ Cloud sync</button>
+      <button class="btn btn-ghost" id="btnImport">Import data</button>
+      <button class="btn btn-ghost" id="btnExport">Export data</button>
+      <button class="btn btn-primary" id="btnAddRace">+ Add race</button>
+    </div>
+  </div>
+
+  <div class="race-tabs" id="raceTabs"></div>
+
+  <div id="heroSlot"></div>
+
+  <div class="grid">
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="card">
+        <h2>12-week plan</h2>
+        <div class="desc" id="planDesc"></div>
+        <div class="week-pills" id="weekPills"></div>
+        <div class="daylist" id="dayList"></div>
+      </div>
+
+      <div class="card">
+        <h2>Training log</h2>
+        <div class="desc">Actual runs, matched against the plan. Edit or add entries — this seeds from your recent Strava activity.</div>
+        <div class="logrow head">
+          <div>Date</div><div>Activity</div><div>Dist.</div><div>Time</div><div>Pace/km</div><div></div>
+        </div>
+        <div id="logRows"></div>
+        <button class="btn btn-ghost btn-sm" id="btnAddLog" style="margin-top:10px;">+ Add entry</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="card">
+        <h2>Performance</h2>
+        <div class="desc">Prediction uses your logged pace data. Target back-calculates the paces you'd need to hit a goal.</div>
+        <div class="modetabs">
+          <div class="modetab active" data-mode="predict">Prediction</div>
+          <div class="modetab" data-mode="target">Target</div>
+        </div>
+        <div id="modeSlot"></div>
+      </div>
+
+      <div class="card">
+        <h2>Adherence insight</h2>
+        <div class="insight" id="insightBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Arunner · built for the myBCA Jakarta Running Fest 2026 #LangkahBersama · dashboard by <a href="https://arsyaamalia.dev" target="_blank">arsyaamalia.dev</a></footer>
+</div>
+
+<!-- Add Race Modal -->
+<div class="overlay" id="raceOverlay">
+  <div class="modal">
+    <h3>Add a race</h3>
+    <div class="field"><label>Race name</label><input id="fRaceName" placeholder="e.g. Borobudur Marathon 2027"></div>
+    <div class="field"><label>Race date</label><input id="fRaceDate" type="date"></div>
+    <div class="field"><label>Category</label>
+      <select id="fRaceCat">
+        <option value="5K">5K</option>
+        <option value="10K">10K</option>
+        <option value="21K">Half Marathon (21K)</option>
+        <option value="42K">Marathon (42K)</option>
+      </select>
+    </div>
+    <div class="field" style="font-size:11.5px;color:var(--plum-soft);">Only the 5K plan is loaded from the official JRF guide. Other categories generate a simplified auto-template scaled to weeks-until-race — treat it as a starting point, not an official program.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelRace">Cancel</button>
+      <button class="btn btn-primary" id="saveRace">Create plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Day Edit Modal -->
+<div class="overlay" id="dayOverlay">
+  <div class="modal">
+    <h3 id="dayModalTitle">Edit session</h3>
+    <div class="field"><label>Type</label>
+      <select id="fDayType"><option value="run">Run</option><option value="pilates">Pilates</option><option value="strength">Strength</option><option value="rest">Rest</option><option value="race">Race</option></select>
+    </div>
+    <div class="field"><label>Title</label><input id="fDayTitle"></div>
+    <div class="field"><label>Note</label><input id="fDayNote"></div>
+    <div class="field"><label>Swap with another day this week</label>
+      <select id="fSwapDay"><option value="">— don't swap —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelDay">Cancel</button>
+      <button class="btn btn-primary" id="saveDay">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cloud Sync Modal -->
+<div class="overlay" id="cloudOverlay">
+  <div class="modal">
+    <h3>Cloud sync (optional)</h3>
+    <div style="font-size:12.5px;color:var(--plum-soft);line-height:1.6;margin-bottom:16px;">
+      This dashboard has no server of its own, so by default your data only lives in this browser tab — use Export/Import to carry it around. If you want it to persist automatically across devices, connect a free Supabase project:
+      <ol style="padding-left:18px;margin:10px 0;">
+        <li>Create a free project at <b>supabase.com</b>.</li>
+        <li>In the SQL editor, run:<br><code style="font-size:11px;background:var(--cream-2);padding:2px 4px;border-radius:4px;display:inline-block;margin-top:4px;">create table dashboard_data (id text primary key, payload jsonb, updated_at timestamptz default now());</code></li>
+        <li>Copy your Project URL and <b>anon public</b> key from Settings → API, paste them below.</li>
+      </ol>
+      Nothing is sent anywhere until you fill this in and click Save — it's entirely optional.
+    </div>
+    <div class="field"><label>Supabase Project URL</label><input id="fSbUrl" placeholder="https://xxxx.supabase.co"></div>
+    <div class="field"><label>Supabase anon public key</label><input id="fSbKey" placeholder="eyJhbGciOi..."></div>
+    <div class="field"><label>Sync code (your own passcode — anyone with it can read/write this data)</label><input id="fSbCode" placeholder="e.g. arsya-arunner-2026"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelCloud">Close</button>
+      <button class="btn btn-ghost btn-sm" id="btnCloudLoad">Load from cloud</button>
+      <button class="btn btn-primary" id="btnCloudSave">Save & sync now</button>
+    </div>
+    <div id="cloudStatus" style="font-size:12px;margin-top:10px;color:var(--teal-deep);"></div>
+  </div>
+</div>
+
+<!-- Log Edit Modal -->
+<div class="overlay" id="logOverlay">
+  <div class="modal">
+    <h3>Add training log entry</h3>
+    <div class="field"><label>Date</label><input id="fLogDate" type="date"></div>
+    <div class="field"><label>Activity name</label><input id="fLogName" placeholder="Morning Zone 2 Run"></div>
+    <div class="field"><label>Distance (km)</label><input id="fLogDist" type="number" step="0.01"></div>
+    <div class="field"><label>Time (mm:ss)</label><input id="fLogTime" placeholder="45:30"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelLog">Cancel</button>
+      <button class="btn btn-primary" id="saveLog">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- toast (dialog-free notifications; confirm/alert can be silently blocked in sandboxed previews) ---------- */
+let toastTimer=null;
+function showToast(msg, isError){
+  let t=document.getElementById('toastBox');
+  if(!t){
+    t=document.createElement('div'); t.id='toastBox';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--plum);color:#fff;padding:12px 20px;border-radius:999px;font-size:13px;font-weight:600;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:90vw;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.style.background = isError? 'var(--coral-deep)':'var(--plum)';
+  t.textContent=msg; t.style.display='block';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{ t.style.display='none'; }, 3200);
+}
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function secToMMSS(sec){ sec=Math.round(sec); const m=Math.floor(sec/60), s=sec%60; return m+':'+String(s).padStart(2,'0'); }
+function mmssToSec(str){ if(!str) return null; const p=str.split(':').map(Number); if(p.length!==2||isNaN(p[0])||isNaN(p[1])) return null; return p[0]*60+p[1]; }
+function fmtDate(iso){ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); }
+function fmtDateParts(iso){ const d=new Date(iso+'T00:00:00'); return { day:d.getDate(), mon:d.toLocaleDateString('en-GB',{month:'short'}) }; }
+function dowShort(iso){ return new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'short'}); }
+function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000); }
+function todayISO(){ return '2026-09-13'; } // fixed "today" for this dashboard context
+
+/* ---------- JRF 5K plan data (from the official 12-week guide) ---------- */
+// off = seconds slower(+) / faster(-) than goal 5K pace, per km. null = n/a (strength/rest) or "easy/testing".
+function d(day,date,type,title,note,off){ return {day,date,type,title,note,off}; }
+
+const PILATES_CHAIR = d(null,null,'pilates','Pilates — Chair','Chair ALL LV · Coach Nanda · 17.00 · glute & single-leg work, swapped in for strength day',null);
+const PILATES_STRETCH = d(null,null,'pilates','Pilates — Stretch','Stretch ALL LV · Coach Nanda · 18.00 · swapped in for this week\'s mobility session',null);
+
+const JRF_5K_WEEKS = [
+[ d('Mon','2026-08-03','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-08-04','run','Interval Tempo','1K x 5, rest 1 min',30),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-08-05'},
+  d('Thu','2026-08-06','run','Easy Run 9K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-08-07','run','Medium Run 7K','1:00/km slower than 5K pace',60),
+  d('Sat','2026-08-08','run','4K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-08-09','run','Parameter Test 5K','Engine check — sets your training pace',null) ],
+[ d('Mon','2026-08-10','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-08-11','run','Interval Tempo','1K x 6, rest 1 min',30),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-08-12'},
+  d('Thu','2026-08-13','run','Easy Run 10K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-08-14','run','Medium Run 8K','1:30/km slower than 5K pace',90),
+  d('Sat','2026-08-15','run','4K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-08-16','run','Easy Long Run 12K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-08-17','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-08-18','run','Threshold','3K x 2, rest 2 min',0),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-08-19'},
+  d('Thu','2026-08-20','run','Easy Run 11K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-08-21','run','Medium Run 8K','1:00/km slower than 5K pace',60),
+  d('Sat','2026-08-22','run','4K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-08-23','run','Easy Long Run 13K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-08-24','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-08-25','run','Easy Run 8K','1:30/km slower than 5K pace',90),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-08-26'},
+  d('Thu','2026-08-27','run','Fartlek Pyramid','500m fast / 500m slow x6, play your speed',null),
+  d('Fri','2026-08-28','run','Easy Run 6K','1:30/km slower than 5K pace',90),
+  d('Sat','2026-08-29','run','4K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-08-30','run','Easy Long Run 12K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-08-31','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-09-01','run','Tempo Run','2.5K x2 + 100m strides x10',40),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-09-02'},
+  d('Thu','2026-09-03','run','Easy Run 8K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-09-04','run','Easy Run 5K','1:30/km slower than 5K pace',90),
+  d('Sat','2026-09-05','run','4K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-09-06','run','Easy Long Run 12K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-09-07','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-09-08','run','Fartlek Pyramid','500m fast / 500m slow x6, play your speed',null),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-09-09'},
+  d('Thu','2026-09-10','run','Easy Run 8K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-09-11','run','Medium Run 6K','1:00/km slower than 5K pace',60),
+  d('Sat','2026-09-12','run','5K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-09-13','run','Easy Long Run 13K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-09-14','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-09-15','run','Interval Training','1000m x5, rest 3 min, 25s/km faster than 5K pace',-25),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-09-16'},
+  d('Thu','2026-09-17','run','Easy Run 6K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-09-18','run','Medium Run 8K','1:00/km slower than 5K pace',60),
+  d('Sat','2026-09-19','run','5K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-09-20','run','Easy Long Run 14K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-09-21','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-09-22','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-09-23'},
+  d('Thu','2026-09-24','run','Easy Run 6K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-09-25','run','Tempo 6K','40s/km slower than 5K pace',40),
+  d('Sat','2026-09-26','run','5K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-09-27','run','Easy Long Run 10K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-09-28','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-09-29','run','Threshold','3K x2, rest 3 min, 25s/km slower than 5K pace',25),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-09-30'},
+  d('Thu','2026-10-01','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
+  d('Fri','2026-10-02','run','Easy Run 6K','1:30/km slower than 5K pace',90),
+  d('Sat','2026-10-03','run','5K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-10-04','run','Easy Long Run 13K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-10-05','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-10-06','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
+  {...PILATES_CHAIR, day:'Wed', date:'2026-10-07'},
+  d('Thu','2026-10-08','run','Easy Run 6K','1:30/km slower than 5K pace',90),
+  d('Fri','2026-10-09','run','Easy Run 8K','1:30/km slower than 5K pace',90),
+  d('Sat','2026-10-10','run','5K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-10-11','run','Easy Long Run 12K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-10-12','rest','Rest','Carbo-load, hydrate, early night',null),
+  d('Tue','2026-10-13','run','Threshold Run','2.5K x2 at 5K pace',0),
+  d('Wed','2026-10-14','run','Easy Run 5K','1:30/km slower than 5K pace',90),
+  d('Thu','2026-10-15','run','Easy Run 8K','1:30/km slower than 5K pace',90),
+  {...PILATES_STRETCH, day:'Fri', date:'2026-10-16'},
+  d('Sat','2026-10-17','run','5K Recovery Run','Easy jog, conversational effort',null),
+  d('Sun','2026-10-18','run','Easy Long Run 10K','1:45/km slower than 5K pace',105) ],
+[ d('Mon','2026-10-19','rest','Rest','Taper — no strength this week',null),
+  d('Tue','2026-10-20','run','Threshold Run','2K x2 at 5K pace',0),
+  d('Wed','2026-10-21','run','Easy Run 6K','1:30/km slower than 5K pace',90),
+  d('Thu','2026-10-22','rest','Rest','Taper — no strength this week',null),
+  d('Fri','2026-10-23','run','Shake Out Run 3K','HR zone 2, carbo-load, early night',null),
+  d('Sat','2026-10-24','race','RACE DAY','myBCA Jakarta Running Fest 2026 — 5K',null) ],
+];
+
+function genericTemplate(category, raceDate){
+  // Very simplified generic 12-week periodized template, scaled by category. Clearly a fallback, not an official plan.
+  const longRunPeak = {'5K':13,'10K':18,'21K':26,'42K':34}[category] || 13;
+  const weeks=[];
+  const start = new Date(raceDate+'T00:00:00'); start.setDate(start.getDate()-83);
+  for(let w=0; w<12; w++){
+    const wDays=[];
+    const longKm = Math.round(longRunPeak * Math.min(1,(w+3)/11));
+    const isTaper = w>=10;
+    const labels = [
+      ['Mon','run','Recovery Run','Easy jog',null],
+      ['Tue','run', isTaper? 'Easy Run':'Interval Session', isTaper? '1:30/km slower than race pace':'Short reps near race pace', isTaper?90:-20],
+      ['Wed','strength','Strength & mobility','General strength circuit',null],
+      ['Thu','run','Medium Run','1:00/km slower than race pace',60],
+      ['Fri','run','Easy Run','1:30/km slower than race pace',90],
+      ['Sat','rest','Rest','Recovery day',null],
+      ['Sun', w===11 ? 'race':'run', w===11 ? 'RACE DAY': 'Long Run '+longKm+'K', w===11? 'Good luck!' : '1:45/km slower than race pace', w===11? null: 105],
+    ];
+    for(let i=0;i<7;i++){
+      const dt=new Date(start); dt.setDate(dt.getDate()+w*7+i);
+      const iso=dt.toISOString().slice(0,10);
+      const [day,type,title,note,off]=labels[i];
+      wDays.push(d(day,iso,type,title,note,off));
+    }
+    weeks.push(wDays);
+  }
+  return weeks;
+}
+
+/* ---------- Seed Strava activities (from athlete's real recent log) ---------- */
+const STRAVA_SEED = [
+  {date:'2026-09-13', name:"Pasuruan Women's Run 2026", dist:4.30, timeSec:1803},
+  {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790},
+  {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944},
+  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.06, timeSec:2062},
+  {date:'2026-09-04', name:'Morning Zone 2 Run (again)', dist:5.05, timeSec:2840},
+  {date:'2026-09-03', name:'Morning Interval Run', dist:2.75, timeSec:1026},
+  {date:'2026-09-02', name:'Morning Zone 2 Run', dist:5.06, timeSec:2768},
+  {date:'2026-08-30', name:'Lunch Run', dist:5.05, timeSec:2678},
+  {date:'2026-08-29', name:'Evening Run', dist:5.05, timeSec:2241},
+];
+
+/* ---------- App state ---------- */
+let state = {
+  activeRaceId: 'jrf2026',
+  races: {
+    jrf2026: {
+      id:'jrf2026', name:'myBCA Jakarta Running Fest 2026', date:'2026-10-24', category:'5K',
+      weeks: JRF_5K_WEEKS,
+      log: STRAVA_SEED.map((s,i)=>({id:'seed'+i, ...s}))
+    }
+  },
+  selectedWeek: 6,
+  mode: 'predict',
+  goalTimeSec: null,
+};
+
+function currentRace(){ return state.races[state.activeRaceId]; }
+
+function weekIndexForToday(race){
+  const t = todayISO();
+  for(let i=0;i<race.weeks.length;i++){
+    const w=race.weeks[i];
+    if(t>=w[0].date && t<=w[w.length-1].date) return i+1;
+  }
+  return t < race.weeks[0][0].date ? 0 : race.weeks.length;
+}
+
+/* ---------- Rendering ---------- */
+function render(){
+  renderTabs();
+  renderHero();
+  renderWeekPills();
+  renderDayList();
+  renderLog();
+  renderMode();
+  renderInsight();
+}
+
+function renderTabs(){
+  const box=$('#raceTabs'); box.innerHTML='';
+  Object.values(state.races).forEach(r=>{
+    const el=document.createElement('div');
+    el.className='race-tab'+(r.id===state.activeRaceId?' active':'');
+    el.textContent=r.name;
+    el.onclick=()=>{ state.activeRaceId=r.id; state.selectedWeek=weekIndexForToday(r)||1; render(); };
+    box.appendChild(el);
+  });
+}
+
+function renderHero(){
+  const r=currentRace();
+  const days=daysBetween(todayISO(), r.date);
+  const curWeek=weekIndexForToday(r);
+  const totalPlanned = r.weeks.flat().filter(x=>x.type==='run'||x.type==='strength'||x.type==='pilates').length;
+  const loggedCount = r.log.length;
+  const adherence = Math.min(100, Math.round(loggedCount/Math.max(1, r.weeks.slice(0,Math.max(curWeek,1)).flat().filter(x=>x.type==='run'||x.type==='strength'||x.type==='pilates').length)*100));
+  $('#heroSlot').innerHTML = `
+    <div class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="hero-cat">${r.category} · ${r.name}</div>
+          <h1>${days>=0? days+' days to go': 'Race day has passed'}</h1>
+          <div class="date">Race day: ${new Date(r.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+        <div class="countdown">
+          <div class="num">W${Math.max(1,Math.min(curWeek,12))}</div>
+          <div class="lbl">of 12 weeks</div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><div class="v">${loggedCount}</div><div class="k">logged sessions</div></div>
+        <div class="hstat"><div class="v">${adherence}%</div><div class="k">plan adherence so far</div></div>
+        <div class="hstat"><div class="v">${r.category}</div><div class="k">race category</div></div>
+      </div>
+    </div>`;
+}
+
+function renderWeekPills(){
+  const r=currentRace(); const box=$('#weekPills'); box.innerHTML='';
+  const curWeek=weekIndexForToday(r);
+  r.weeks.forEach((w,i)=>{
+    const num=i+1;
+    const el=document.createElement('div');
+    el.className='wpill'+(num<curWeek?' done':'')+(num===curWeek?' current':'')+(num===state.selectedWeek?' active-sel':'');
+    el.innerHTML=`<div class="n">${num}</div>`;
+    el.onclick=()=>{ state.selectedWeek=num; render(); };
+    box.appendChild(el);
+  });
+  $('#planDesc').textContent = r.category==='5K' && r.id==='jrf2026'
+    ? "Loaded from the official myBCA Jakarta Running Fest 2026 guide. Click any day to edit or swap it with another day in the same week."
+    : "Auto-generated template for a "+r.category+" — adjust freely, it's a starting point.";
+}
+
+function renderDayList(){
+  const r=currentRace(); const wk=r.weeks[state.selectedWeek-1]; const box=$('#dayList'); box.innerHTML='';
+  wk.forEach((day,idx)=>{
+    const logged = r.log.find(l=>l.date===day.date);
+    const el=document.createElement('div');
+    el.className='daycard';
+    const tagClass = 'tag-'+day.type;
+    el.innerHTML=`
+      <div class="dnum"><div class="dow">${day.day}</div><div class="dd">${fmtDateParts(day.date).day}</div><div class="dm">${fmtDateParts(day.date).mon}</div></div>
+      <div>
+        <span class="tag ${tagClass}">${day.type}</span>
+        <span class="title">${day.title}</span>
+        <div class="note">${day.note||''}</div>
+      </div>
+      <div>${logged? `<span class="logged-badge">✓ ${logged.dist}km logged</span>` : ''}</div>
+    `;
+    el.onclick=()=>openDayModal(idx);
+    box.appendChild(el);
+  });
+}
+
+function openDayModal(idx){
+  const r=currentRace(); const wk=r.weeks[state.selectedWeek-1]; const day=wk[idx];
+  $('#dayModalTitle').textContent = day.day+', '+fmtDate(day.date);
+  $('#fDayType').value=day.type;
+  $('#fDayTitle').value=day.title;
+  $('#fDayNote').value=day.note||'';
+  const sw=$('#fSwapDay'); sw.innerHTML='<option value="">— don\'t swap —</option>';
+  wk.forEach((dd,i)=>{ if(i!==idx){ const o=document.createElement('option'); o.value=i; o.textContent=dd.day+' — '+dd.title; sw.appendChild(o);} });
+  $('#dayOverlay').classList.add('show');
+  $('#saveDay').onclick=()=>{
+    const swapIdx=sw.value;
+    if(swapIdx!==''){
+      const a=wk[idx], b=wk[parseInt(swapIdx)];
+      const tmp={type:a.type,title:a.title,note:a.note,off:a.off};
+      a.type=b.type; a.title=b.title; a.note=b.note; a.off=b.off;
+      b.type=tmp.type; b.title=tmp.title; b.note=tmp.note; b.off=tmp.off;
+    } else {
+      day.type=$('#fDayType').value; day.title=$('#fDayTitle').value; day.note=$('#fDayNote').value;
+    }
+    $('#dayOverlay').classList.remove('show');
+    render();
+  };
+}
+$('#cancelDay').onclick=()=>$('#dayOverlay').classList.remove('show');
+
+function renderLog(){
+  const r=currentRace(); const box=$('#logRows'); box.innerHTML='';
+  const sorted=[...r.log].sort((a,b)=> a.date<b.date?1:-1);
+  sorted.forEach(l=>{
+    const pace = l.timeSec/l.dist;
+    const planDay = r.weeks.flat().find(x=>x.date===l.date);
+    let matchHtml='<span class="match-none">unplanned</span>';
+    if(planDay){
+      if(planDay.type==='run') matchHtml='<span class="match-ok">matches plan</span>';
+      else matchHtml='<span class="match-off">plan said '+planDay.type+'</span>';
+    }
+    const el=document.createElement('div');
+    el.className='logrow';
+    el.innerHTML=`
+      <div>${fmtDate(l.date)}</div>
+      <div>${l.name}<br><span style="font-size:10.5px;color:var(--plum-soft);">${matchHtml}</span></div>
+      <div>${l.dist.toFixed(2)}km</div>
+      <div>${secToMMSS(l.timeSec)}</div>
+      <div>${secToMMSS(pace)}/km</div>
+      <div class="del-x">✕</div>
+    `;
+    el.querySelector('.del-x').onclick=()=>{ r.log=r.log.filter(x=>x.id!==l.id); render(); };
+    box.appendChild(el);
+  });
+}
+
+$('#btnAddLog').onclick=()=>{
+  $('#fLogDate').value=todayISO(); $('#fLogName').value=''; $('#fLogDist').value=''; $('#fLogTime').value='';
+  $('#logOverlay').classList.add('show');
+};
+$('#cancelLog').onclick=()=>$('#logOverlay').classList.remove('show');
+$('#saveLog').onclick=()=>{
+  const r=currentRace();
+  const t=mmssToSec($('#fLogTime').value);
+  const dist=parseFloat($('#fLogDist').value);
+  if(!$('#fLogDate').value || !dist || !t){ showToast('Isi tanggal, jarak, dan waktu dengan benar (mm:ss).', true); return; }
+  r.log.push({id:'l'+Date.now(), date:$('#fLogDate').value, name:$('#fLogName').value||'Run', dist, timeSec:t});
+  $('#logOverlay').classList.remove('show');
+  render();
+};
+
+/* ---------- Prediction / Target ---------- */
+function bestRecentPaceSecPerKm(race){
+  // Best (fastest) pace among non-race training logs of reasonable length (>=2km), as the cleanest fitness signal.
+  const candidates = race.log.filter(l=>l.dist>=2);
+  if(candidates.length===0) return null;
+  let best=null;
+  candidates.forEach(l=>{ const p=l.timeSec/l.dist; if(!best || p<best.pace) best={pace:p, entry:l}; });
+  return best;
+}
+function riegel(t1,d1,d2){ return t1*Math.pow(d2/d1,1.06); }
+
+function renderMode(){
+  const r=currentRace();
+  const slot=$('#modeSlot');
+  const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[r.category] || 5;
+
+  if(state.mode==='predict'){
+    const best=bestRecentPaceSecPerKm(r);
+    if(!best){
+      slot.innerHTML=`<div class="method-box">No training log entries yet — add at least one run to get a prediction.</div>`;
+      return;
+    }
+    const predictedSec = riegel(best.entry.timeSec, best.entry.dist, raceDistKm);
+    const rangeLow = predictedSec*0.985, rangeHigh = predictedSec*1.03;
+    slot.innerHTML=`
+      <div class="pred-number">
+        <div class="val">${secToMMSS(predictedSec)}</div>
+        <div class="sub">predicted ${r.category} time · range ${secToMMSS(rangeLow)}–${secToMMSS(rangeHigh)}</div>
+      </div>
+      <div class="method-box">
+        <b>Method:</b> Riegel formula (T₂ = T₁ × (D₂/D₁)^1.06), extrapolated from your fastest logged effort of 2km or more — <b>${best.entry.name}</b> on ${fmtDate(best.entry.date)} (${best.entry.dist.toFixed(2)}km in ${secToMMSS(best.entry.timeSec)}, ${secToMMSS(best.entry.timeSec/best.entry.dist)}/km).
+        <br><br>This is a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number. Log more sessions as race day nears and this updates automatically.
+      </div>`;
+  } else {
+    const best=bestRecentPaceSecPerKm(r);
+    slot.innerHTML=`
+      <div class="goal-input">
+        <input id="goalInput" type="text" placeholder="mm:ss" value="${state.goalTimeSec? secToMMSS(state.goalTimeSec):''}">
+        <span>goal ${r.category} time</span>
+      </div>
+      <div id="targetOut"></div>
+      <button class="btn btn-primary btn-sm" id="btnApplyTarget" style="width:100%;margin-top:10px;">Apply this target to remaining weeks</button>
+      <div id="applyStatus" style="font-size:11.5px;color:var(--plum-soft);margin-top:8px;"></div>
+    `;
+    $('#goalInput').oninput=(e)=>{
+      const s=mmssToSec(e.target.value);
+      state.goalTimeSec = s;
+      renderTargetTable(r, raceDistKm, best);
+    };
+    let applyArmed=false, applyTimer=null;
+    $('#btnApplyTarget').onclick=(e)=>{
+      const btn=e.target;
+      if(!state.goalTimeSec){ $('#applyStatus').textContent='Enter a goal time first.'; return; }
+      const startIdx = weekIndexForToday(r); // next not-yet-started week, 0-based index
+      if(startIdx>=r.weeks.length){ $('#applyStatus').textContent='No remaining weeks to adapt — race has passed or this is the final week.'; return; }
+      if(!applyArmed){
+        applyArmed=true;
+        btn.textContent='Click again to confirm — overwrites weeks '+(startIdx+1)+'–'+r.weeks.length;
+        btn.style.background='var(--coral-deep)';
+        clearTimeout(applyTimer);
+        applyTimer=setTimeout(()=>{ applyArmed=false; btn.textContent='Apply this target to remaining weeks'; btn.style.background=''; }, 5000);
+        return;
+      }
+      clearTimeout(applyTimer);
+      applyArmed=false;
+      applyAdaptivePlan(r, state.goalTimeSec, startIdx);
+      $('#applyStatus').textContent='Plan updated for weeks '+(startIdx+1)+'–'+r.weeks.length+'.';
+      render();
+    };
+    renderTargetTable(r, raceDistKm, best);
+  }
+}
+
+function computeAvgEasyDistanceKm(race){
+  const runs = race.log.filter(l=>l.dist>=2);
+  if(!runs.length) return 5;
+  return Math.round((runs.reduce((a,b)=>a+b.dist,0)/runs.length)*10)/10;
+}
+
+function applyAdaptivePlan(race, goalTimeSec, startIdx){
+  const avgEasy = computeAvgEasyDistanceKm(race);
+  const longPeak = Math.min(10, Math.max(7, Math.round(avgEasy*1.7*10)/10));
+  const buildSpan = Math.max(1, 10-startIdx); // weeks of ramp before the sharpen week (week 11, index10)
+  for(let i=startIdx; i<race.weeks.length; i++){
+    const weekNum=i+1;
+    const wk=race.weeks[i];
+    const isTaper = weekNum===12;
+    const isSharpen = weekNum===11;
+    const progress = Math.min(1, Math.max(0, i-startIdx)/buildSpan);
+    if(isTaper){
+      wk.forEach(day=>{
+        if(day.type!=='run') return;
+        if(day.day==='Tue'){ day.title='Race-Pace Touch'; day.note='2 x 1km at goal pace, rest 2 min — stay sharp, not tired'; day.off=0; }
+        else if(day.day==='Wed'){ const dist=Math.max(3,Math.round(avgEasy*0.8*10)/10); day.title='Easy Run '+dist+'K'; day.note='1:30/km slower than goal pace'; day.off=90; }
+        else if(day.day==='Fri'){ day.title='Shake Out Run 3K'; day.note='HR zone 2, carbo-load, early night'; day.off=null; }
+      });
+      continue;
+    }
+    wk.forEach(day=>{
+      if(day.type!=='run') return;
+      if(day.day==='Tue'){
+        if(isSharpen){ day.title='Race-Pace Intervals'; day.note='3 x 1km at goal pace, rest 2 min'; day.off=0; }
+        else{ const reps=4+Math.round(progress*2); day.title='Speed Intervals'; day.note=reps+' x 400m at goal pace minus 10s/km, rest 90 sec'; day.off=-10; }
+      } else if(day.day==='Wed'){
+        const dist=Math.round((avgEasy+progress*0.6)*10)/10;
+        day.title='Easy Run '+dist+'K'; day.note='1:30/km slower than goal pace'; day.off=90;
+      } else if(day.day==='Thu'){
+        const dist=Math.round((avgEasy+progress*0.8)*10)/10;
+        day.title='Easy Run '+dist+'K'; day.note='1:30/km slower than goal pace'; day.off=90;
+      } else if(day.day==='Fri'){
+        const dist=Math.round((avgEasy+0.5+progress*0.8)*10)/10;
+        day.title='Medium Run '+dist+'K'; day.note='1:00/km slower than goal pace'; day.off=60;
+      } else if(day.day==='Sat'){
+        const dist=Math.max(3, Math.round(avgEasy*0.6*10)/10);
+        day.title='Recovery Run '+dist+'K'; day.note='Easy jog, conversational effort'; day.off=null;
+      } else if(day.day==='Sun' && day.title!=='RACE DAY'){
+        const dist = isSharpen ? Math.round(longPeak*0.7*10)/10 : Math.round((avgEasy+1+progress*(longPeak-(avgEasy+1)))*10)/10;
+        day.title='Long Run '+dist+'K'; day.note='1:45/km slower than goal pace'; day.off=105;
+      }
+    });
+  }
+}
+
+function renderTargetTable(race, raceDistKm, best){
+  const out=$('#targetOut'); if(!out) return;
+  if(!state.goalTimeSec){ out.innerHTML='<div class="method-box">Enter a goal time above to see the paces you need to hit for the rest of your plan.</div>'; return; }
+  const goalPaceSecPerKm = state.goalTimeSec/raceDistKm;
+  let gapNote='';
+  if(best){
+    const predictedSec = riegel(best.entry.timeSec, best.entry.dist, raceDistKm);
+    const predictedPace = predictedSec/raceDistKm;
+    const gapPct = Math.round(((predictedPace-goalPaceSecPerKm)/predictedPace)*1000)/10;
+    if(gapPct>3){
+      gapNote = `<br><br><b>Heads up:</b> your goal pace is about ${gapPct}% faster than your current training-based prediction (${secToMMSS(predictedSec)}). That's a real fitness gap to close in the weeks left — the adapted plan below leans on speed work rather than piling on distance to try to close it.`;
+    } else if(gapPct<-3){
+      gapNote = `<br><br>Your goal is actually slower than your current predicted fitness (${secToMMSS(predictedSec)}) — you likely have room to run this comfortably. The adapted plan keeps volume modest rather than overloading you.`;
+    } else {
+      gapNote = `<br><br>Your goal is close to your current predicted fitness (${secToMMSS(predictedSec)}) — the adapted plan focuses on maintaining sharpness rather than big changes.`;
+    }
+  }
+  const wk = race.weeks[state.selectedWeek-1];
+  const rows = wk.filter(x=>x.type==='run' && x.off!==null && x.title!=='RACE DAY').map(x=>{
+    const p = goalPaceSecPerKm + x.off;
+    return `<tr><td>${x.day} — ${x.title}</td><td class="p">${secToMMSS(p)}/km</td></tr>`;
+  }).join('');
+  out.innerHTML = `
+    <div class="method-box"><b>Target pace:</b> ${secToMMSS(goalPaceSecPerKm)}/km to hit ${secToMMSS(state.goalTimeSec)}.${gapNote}</div>
+    <table class="pacetable"><thead><tr><th>Session (this week)</th><th>Target pace</th></tr></thead><tbody>${rows||'<tr><td colspan=2>No pace-based sessions this week.</td></tr>'}</tbody></table>
+    <div class="method-box" style="margin-top:10px;"><b>Volume model:</b> long-run peak and easy-run distance are scaled from your actual logged average (${computeAvgEasyDistanceKm(race)}km/run), not the original JRF template — capped around ${Math.min(10,Math.max(7,Math.round(computeAvgEasyDistanceKm(race)*1.7*10)/10))}km for the peak long run, appropriate for a 5K rather than the original 12–14K. Click "Apply this target to remaining weeks" to write it into the plan.</div>
+  `;
+}
+
+$$('.modetab').forEach(t=>{
+  t.onclick=()=>{ $$('.modetab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); state.mode=t.dataset.mode; renderMode(); };
+});
+
+/* ---------- Insight ---------- */
+function renderInsight(){
+  const r=currentRace();
+  const past = r.weeks.flat().filter(x=>x.date<=todayISO());
+  const strengthPlanned = past.filter(x=>x.type==='strength'||x.type==='pilates').length;
+  const strengthLogged = r.log.filter(l=> past.find(p=>p.date===l.date && (p.type==='strength'||p.type==='pilates'))).length;
+  const longRunsPlanned = past.filter(x=>x.type==='run' && x.title.toLowerCase().includes('long run'));
+  let shortfalls=0, matches=0;
+  longRunsPlanned.forEach(lr=>{
+    const target = parseInt(lr.title.match(/(\d+)K/)?.[1]||0);
+    const logged = r.log.find(l=>l.date===lr.date);
+    if(logged){ if(logged.dist < target*0.75) shortfalls++; else matches++; }
+  });
+  const unplanned = r.log.filter(l=> !past.find(p=>p.date===l.date)).length;
+
+  $('#insightBox').innerHTML = `
+    You've logged <b>${r.log.length}</b> sessions against <b>${past.filter(x=>x.type==='run'||x.type==='strength'||x.type==='pilates').length}</b> planned run/pilates days so far.
+    Pilates/strength days: <b>${strengthLogged}/${strengthPlanned}</b> completed on schedule.
+    ${longRunsPlanned.length? `Long runs: <b>${shortfalls}</b> came in noticeably shorter than planned, <b>${matches}</b> matched or exceeded target.` : ''}
+    ${unplanned? `<b>${unplanned}</b> logged run(s) fell on a day the plan had scheduled something else (often rest or strength) — you've been running more freely than the official schedule prescribes.` : ''}
+    Use this to decide whether to follow the plan more strictly from here, or keep adapting it to what's actually working for you.
+  `;
+}
+
+/* ---------- Add race modal ---------- */
+$('#btnAddRace').onclick=()=>{ $('#fRaceName').value=''; $('#fRaceDate').value=''; $('#fRaceCat').value='5K'; $('#raceOverlay').classList.add('show'); };
+$('#cancelRace').onclick=()=>$('#raceOverlay').classList.remove('show');
+$('#saveRace').onclick=()=>{
+  const name=$('#fRaceName').value.trim(); const date=$('#fRaceDate').value; const cat=$('#fRaceCat').value;
+  if(!name||!date){ showToast('Isi nama race dan tanggal.', true); return; }
+  const id='r'+Date.now();
+  state.races[id] = { id, name, date, category:cat, weeks: genericTemplate(cat,date), log: [] };
+  state.activeRaceId=id; state.selectedWeek=1;
+  $('#raceOverlay').classList.remove('show');
+  render();
+};
+
+/* ---------- Cloud sync (optional, Supabase) ----------
+   Config lives in memory only for this preview session — see CRITICAL BROWSER
+   STORAGE RESTRICTION in this environment. Once you download this file and host
+   it yourself (e.g. on arsyaamalia.dev), you can uncomment the two localStorage
+   lines below each config read/write to remember your Supabase project locally,
+   since that restriction is specific to the Claude.ai artifact preview. */
+let sbConfig = { url:'', key:'', code:'' };
+
+$('#btnCloudSetup').onclick=()=>{
+  $('#fSbUrl').value = sbConfig.url;
+  $('#fSbKey').value = sbConfig.key;
+  $('#fSbCode').value = sbConfig.code;
+  $('#cloudStatus').textContent='';
+  $('#cloudOverlay').classList.add('show');
+};
+$('#cancelCloud').onclick=()=>$('#cloudOverlay').classList.remove('show');
+
+function readSbConfig(){
+  sbConfig = { url:$('#fSbUrl').value.trim().replace(/\/$/,''), key:$('#fSbKey').value.trim(), code:$('#fSbCode').value.trim() };
+  // Self-hosted only: localStorage.setItem('arunner_sb_config', JSON.stringify(sbConfig));
+  return sbConfig.url && sbConfig.key && sbConfig.code;
+}
+
+$('#btnCloudSave').onclick=async ()=>{
+  if(!readSbConfig()){ $('#cloudStatus').style.color='var(--coral-deep)'; $('#cloudStatus').textContent='Fill in all three fields first.'; return; }
+  $('#cloudStatus').style.color='var(--plum-soft)'; $('#cloudStatus').textContent='Saving…';
+  try{
+    const res = await fetch(sbConfig.url+'/rest/v1/dashboard_data', {
+      method:'POST',
+      headers:{
+        'apikey': sbConfig.key,
+        'Authorization':'Bearer '+sbConfig.key,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ id: sbConfig.code, payload: state })
+    });
+    if(!res.ok) throw new Error(await res.text());
+    $('#cloudStatus').style.color='var(--teal-deep)'; $('#cloudStatus').textContent='Saved to cloud ✓';
+  }catch(err){
+    $('#cloudStatus').style.color='var(--coral-deep)'; $('#cloudStatus').textContent='Could not save — check your URL/key and that the table exists. ('+err.message+')';
+  }
+};
+
+$('#btnCloudLoad').onclick=async ()=>{
+  if(!readSbConfig()){ $('#cloudStatus').style.color='var(--coral-deep)'; $('#cloudStatus').textContent='Fill in all three fields first.'; return; }
+  $('#cloudStatus').style.color='var(--plum-soft)'; $('#cloudStatus').textContent='Loading…';
+  try{
+    const res = await fetch(sbConfig.url+'/rest/v1/dashboard_data?id=eq.'+encodeURIComponent(sbConfig.code)+'&select=payload', {
+      headers:{ 'apikey': sbConfig.key, 'Authorization':'Bearer '+sbConfig.key }
+    });
+    if(!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    if(!rows.length){ $('#cloudStatus').style.color='var(--gold)'; $('#cloudStatus').textContent='No saved data found for this sync code yet — save first.'; return; }
+    state = rows[0].payload;
+    $('#cloudStatus').style.color='var(--teal-deep)'; $('#cloudStatus').textContent='Loaded from cloud ✓';
+    render();
+  }catch(err){
+    $('#cloudStatus').style.color='var(--coral-deep)'; $('#cloudStatus').textContent='Could not load — check your URL/key/code. ('+err.message+')';
+  }
+};
+
+/* ---------- Export / Import ---------- */
+$('#btnExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='arunner-dashboard-data.json'; a.click();
+  URL.revokeObjectURL(url);
+};
+$('#btnImport').onclick=()=>{
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange=(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{ const data=JSON.parse(reader.result); state=data; render(); }
+      catch(err){ showToast('File tidak valid.', true); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+};
+
+/* ---------- init ---------- */
+state.selectedWeek = weekIndexForToday(currentRace()) || 1;
+render();
+</script>
+</body>
+</html>
