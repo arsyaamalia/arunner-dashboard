@@ -732,8 +732,11 @@ function computeAvgEasyDistanceKm(race){
 
 function applyAdaptivePlan(race, goalTimeSec, startIdx){
   const avgEasy = computeAvgEasyDistanceKm(race);
-  const longPeak = Math.min(10, Math.max(7, Math.round(avgEasy*1.7*10)/10));
-  const buildSpan = Math.max(1, 10-startIdx); // weeks of ramp before the sharpen week (week 11, index10)
+  const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[race.category] || 5;
+  const goalPaceSecPerKm = goalTimeSec/raceDistKm;
+  const bestEffort = bestRecentPaceSecPerKm(race);
+  const currentPaceSecPerKm = bestEffort ? riegel(bestEffort.entry.timeSec, bestEffort.entry.dist, raceDistKm)/raceDistKm : goalPaceSecPerKm;
+  const buildSpan = Math.max(1, 10-startIdx); // weeks of ramp before the checkpoint week (week 11, index10)
   for(let i=startIdx; i<race.weeks.length; i++){
     const weekNum=i+1;
     const wk=race.weeks[i];
@@ -764,11 +767,16 @@ function applyAdaptivePlan(race, goalTimeSec, startIdx){
         const dist=Math.round((avgEasy+0.5+progress*0.8)*10)/10;
         day.title='Medium Run '+dist+'K'; day.note='1:00/km slower than goal pace'; day.off=60;
       } else if(day.day==='Sat'){
-        const dist=Math.max(3, Math.round(avgEasy*0.6*10)/10);
-        day.title='Recovery Run '+dist+'K'; day.note='Easy jog, conversational effort'; day.off=null;
+        const dist=Math.max(4, Math.round(avgEasy*0.9*10)/10);
+        day.title='Easy Run '+dist+'K'; day.note='Easy pace — extra aerobic volume since Sunday is now a hard effort'; day.off=90;
       } else if(day.day==='Sun' && day.title!=='RACE DAY'){
-        const dist = isSharpen ? Math.round(longPeak*0.7*10)/10 : Math.round((avgEasy+1+progress*(longPeak-(avgEasy+1)))*10)/10;
-        day.title='Long Run '+dist+'K'; day.note='1:45/km slower than goal pace'; day.off=105;
+        const diff = currentPaceSecPerKm - goalPaceSecPerKm;
+        const targetPace = diff<=0 ? goalPaceSecPerKm : currentPaceSecPerKm - (progress*0.9)*diff; // week 11 lands ~90% of the way there, so race day is still the breakthrough
+        day.title = isSharpen ? 'Time Trial — Goal Pace Test' : 'Progressive Tempo '+raceDistKm+'K';
+        day.note = isSharpen
+          ? 'Full '+raceDistKm+'K at goal pace — dress rehearsal, one week out'
+          : 'Full '+raceDistKm+'K — aim for the pace below, a controlled step down from your current best, not an all-out effort';
+        day.off = Math.round(targetPace - goalPaceSecPerKm);
       }
     });
   }
