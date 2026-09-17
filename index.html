@@ -460,7 +460,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 3; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 4; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -782,7 +782,7 @@ function applyAdaptivePlan(race, goalTimeSec){
       if(!(day.date>today)) return;          // never rewrites today or the past — only what's still ahead
 
       if(raceDates.has(addDaysISO(day.date,1))){
-        day.title='Shakeout — Race Tomorrow'; day.note='Very easy 2–3km, stay loose, rest up'; day.off=null; return;
+        day.title='Shakeout + Strides'; day.note='Easy 2–3km, then 4–6 x 20sec relaxed strides (not sprints) — wakes the legs up without adding fatigue'; day.off=null; return;
       }
       if(raceDates.has(addDaysISO(day.date,-1))){
         day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null; return;
