@@ -568,19 +568,31 @@ function renderWeekPills(){
 
 function renderDayList(){
   const r=currentRace(); const wk=r.weeks[state.selectedWeek-1]; const box=$('#dayList'); box.innerHTML='';
+  const curWeek = weekIndexForToday(r);
+  const isPastWeek = state.selectedWeek < curWeek;
   wk.forEach((day,idx)=>{
     const logged = r.log.find(l=>l.date===day.date);
     const el=document.createElement('div');
     el.className='daycard';
-    const tagClass = 'tag-'+day.type;
+    let displayType=day.type, displayTitle=day.title, displayNote=day.note||'';
+    if(isPastWeek && day.type==='run'){
+      if(logged){
+        const pace = logged.timeSec/logged.dist;
+        displayType='run'; displayTitle=logged.name;
+        displayNote=logged.dist.toFixed(2)+'km in '+secToMMSS(logged.timeSec)+' ('+secToMMSS(pace)+'/km) — actual, not planned';
+      } else {
+        displayType='rest'; displayTitle='Rest'; displayNote='No activity logged this day';
+      }
+    }
+    const tagClass = 'tag-'+displayType;
     el.innerHTML=`
       <div class="dnum"><div class="dow">${day.day}</div><div class="dd">${fmtDateParts(day.date).day}</div><div class="dm">${fmtDateParts(day.date).mon}</div></div>
       <div>
-        <span class="tag ${tagClass}">${day.type}</span>
-        <span class="title">${day.title}</span>
-        <div class="note">${day.note||''}</div>
+        <span class="tag ${tagClass}">${displayType}</span>
+        <span class="title">${displayTitle}</span>
+        <div class="note">${displayNote}</div>
       </div>
-      <div>${logged? `<span class="logged-badge">✓ ${logged.dist}km logged</span>` : ''}</div>
+      <div>${(!isPastWeek && logged)? `<span class="logged-badge">✓ ${logged.dist}km logged</span>` : ''}</div>
     `;
     el.onclick=()=>openDayModal(idx);
     box.appendChild(el);
@@ -939,6 +951,23 @@ $('#btnImport').onclick=()=>{
 };
 
 /* ---------- init ---------- */
+// Default: even with no target set, the plan for "now → race day" should already reflect
+// an AI recommendation from category + Strava history (not just the static base template).
+// This runs once per race (tracked by autoAdapted) so it never clobbers manual edits or a
+// later real target on subsequent loads.
+Object.values(state.races).forEach(race=>{
+  if(race.autoAdapted) return;
+  const startIdx = weekIndexForToday(race);
+  if(startIdx>=race.weeks.length){ race.autoAdapted=true; return; }
+  const best = bestRecentPaceSecPerKm(race);
+  if(best){
+    const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[race.category] || 5;
+    const pseudoGoalSec = riegel(best.entry.timeSec, best.entry.dist, raceDistKm);
+    applyAdaptivePlan(race, pseudoGoalSec, startIdx);
+  }
+  race.autoAdapted=true;
+});
+
 state.selectedWeek = weekIndexForToday(currentRace()) || 1;
 render();
 </script>
