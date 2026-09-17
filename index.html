@@ -314,7 +314,10 @@ function fmtDate(iso){ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateS
 function fmtDateParts(iso){ const d=new Date(iso+'T00:00:00'); return { day:d.getDate(), mon:d.toLocaleDateString('en-GB',{month:'short'}) }; }
 function dowShort(iso){ return new Date(iso+'T00:00:00').toLocaleDateString('en-US',{weekday:'short'}); }
 function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000); }
-function todayISO(){ return '2026-09-13'; } // fixed "today" for this dashboard context
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 
 /* ---------- JRF 5K plan data (from the official 12-week guide) ---------- */
 // off = seconds slower(+) / faster(-) than goal 5K pace, per km. null = n/a (strength/rest) or "easy/testing".
