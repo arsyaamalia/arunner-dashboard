@@ -377,8 +377,8 @@ const JRF_5K_WEEKS = [
   {...PILATES_REFORMER, day:'Wed', date:'2026-09-16'},
   d('Thu','2026-09-17','run','Easy Run 6K','1:30/km slower than 5K pace',90),
   d('Fri','2026-09-18','run','Medium Run 8K','1:00/km slower than 5K pace',60),
-  d('Sat','2026-09-19','race','5K Race','ad-hoc race, not the main JRF goal',null),
-  d('Sun','2026-09-20','race','10K Race — Target 7:15/km','ad-hoc race, target pace 7:15/km',null) ],
+  d('Sat','2026-09-19','race','Fun Run 5K','easy/social pace, not a hard effort, no taper needed for this one specifically',null),
+  d('Sun','2026-09-20','race','10K Race — Target ≤7:15/km','the real target effort this weekend, hoping for 7:00–7:10/km',null) ],
 [ d('Mon','2026-09-21','rest','Rest','Carbo-load, hydrate, early night',null),
   d('Tue','2026-09-22','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
   {...PILATES_CHAIR, day:'Wed', date:'2026-09-23'},
@@ -460,7 +460,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 2; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 3; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
