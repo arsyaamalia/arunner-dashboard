@@ -154,6 +154,7 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btnRefreshPlan" title="Recalculates the plan from your current log + any races you've added — this does not pull new data from Strava automatically, ask Claude to sync fresh activities first">↻ Refresh plan</button>
       <button class="btn btn-ghost" id="btnCloudSetup">☁ Cloud sync</button>
       <button class="btn btn-ghost" id="btnImport">Import data</button>
       <button class="btn btn-ghost" id="btnExport">Export data</button>
@@ -376,8 +377,8 @@ const JRF_5K_WEEKS = [
   {...PILATES_REFORMER, day:'Wed', date:'2026-09-16'},
   d('Thu','2026-09-17','run','Easy Run 6K','1:30/km slower than 5K pace',90),
   d('Fri','2026-09-18','run','Medium Run 8K','1:00/km slower than 5K pace',60),
-  d('Sat','2026-09-19','run','5K Recovery Run','Easy jog, conversational effort',null),
-  d('Sun','2026-09-20','run','Easy Long Run 14K','1:45/km slower than 5K pace',105) ],
+  d('Sat','2026-09-19','race','5K Race','ad-hoc race, not the main JRF goal',null),
+  d('Sun','2026-09-20','race','10K Race — Target 7:15/km','ad-hoc race, target pace 7:15/km',null) ],
 [ d('Mon','2026-09-21','rest','Rest','Carbo-load, hydrate, early night',null),
   d('Tue','2026-09-22','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
   {...PILATES_CHAIR, day:'Wed', date:'2026-09-23'},
@@ -445,6 +446,8 @@ function genericTemplate(category, raceDate){
 
 /* ---------- Seed Strava activities (from athlete's real recent log) ---------- */
 const STRAVA_SEED = [
+  {date:'2026-09-17', name:'anggep aja Long Run plz', dist:8.89, timeSec:3999},
+  {date:'2026-09-16', name:'Morning Interval Run (failed)', dist:1.87, timeSec:736},
   {date:'2026-09-13', name:"Pasuruan Women's Run 2026", dist:4.30, timeSec:1803},
   {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790},
   {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944},
@@ -457,7 +460,9 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
+const SCHEMA_VERSION = 2; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
+  schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
   races: {
     jrf2026: {
@@ -486,7 +491,10 @@ function loadLocal(){
   return null;
 }
 const restored = loadLocal();
-if(restored) state = restored;
+if(restored && restored.schemaVersion===SCHEMA_VERSION) state = restored;
+// else: a structural update shipped since the cached copy was saved — keep the fresh
+// defaults above (any manual edits in the stale cache are lost, but silently serving
+// outdated plan data would be worse).
 
 function currentRace(){ return state.races[state.activeRaceId]; }
 
@@ -719,11 +727,9 @@ function renderMode(){
     $('#btnApplyTarget').onclick=(e)=>{
       const btn=e.target;
       if(!state.goalTimeSec){ $('#applyStatus').textContent='Enter a goal time first.'; return; }
-      const startIdx = weekIndexForToday(r); // next not-yet-started week, 0-based index
-      if(startIdx>=r.weeks.length){ $('#applyStatus').textContent='No remaining weeks to adapt — race has passed or this is the final week.'; return; }
       if(!applyArmed){
         applyArmed=true;
-        btn.textContent='Click again to confirm — overwrites weeks '+(startIdx+1)+'–'+r.weeks.length;
+        btn.textContent='Click again to confirm — overwrites every future day up to race day';
         btn.style.background='var(--coral-deep)';
         clearTimeout(applyTimer);
         applyTimer=setTimeout(()=>{ applyArmed=false; btn.textContent='Apply this target to remaining weeks'; btn.style.background=''; }, 5000);
@@ -731,8 +737,8 @@ function renderMode(){
       }
       clearTimeout(applyTimer);
       applyArmed=false;
-      applyAdaptivePlan(r, state.goalTimeSec, startIdx);
-      $('#applyStatus').textContent='Plan updated for weeks '+(startIdx+1)+'–'+r.weeks.length+'.';
+      applyAdaptivePlan(r, state.goalTimeSec);
+      $('#applyStatus').textContent='Plan updated for every day after today.';
       render();
     };
     renderTargetTable(r, raceDistKm, best);
@@ -745,30 +751,49 @@ function computeAvgEasyDistanceKm(race){
   return Math.round((runs.reduce((a,b)=>a+b.dist,0)/runs.length)*10)/10;
 }
 
-function applyAdaptivePlan(race, goalTimeSec, startIdx){
+function addDaysISO(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function applyAdaptivePlan(race, goalTimeSec){
   const avgEasy = computeAvgEasyDistanceKm(race);
   const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[race.category] || 5;
   const goalPaceSecPerKm = goalTimeSec/raceDistKm;
   const bestEffort = bestRecentPaceSecPerKm(race);
   const currentPaceSecPerKm = bestEffort ? riegel(bestEffort.entry.timeSec, bestEffort.entry.dist, raceDistKm)/raceDistKm : goalPaceSecPerKm;
-  const buildSpan = Math.max(1, 10-startIdx); // weeks of ramp before the checkpoint week (week 11, index10)
-  for(let i=startIdx; i<race.weeks.length; i++){
+  const today = todayISO();
+
+  // Any day (anywhere in the plan) marked type 'race' is a real scheduled race — main race
+  // or an ad-hoc one the user inserted — and always protected from regeneration, plus it
+  // taper/recovery-shapes the days immediately around it.
+  const raceDates = new Set();
+  race.weeks.forEach(wk=> wk.forEach(day=>{ if(day.type==='race') raceDates.add(day.date); }));
+
+  const curWeekIdx1 = weekIndexForToday(race); // 1-based; used only to anchor the build-up progression
+  const effectiveStartIdx = Math.max(0, Math.min(curWeekIdx1>0? curWeekIdx1-1 : 0, race.weeks.length-1));
+  const buildSpan = Math.max(1, 10-effectiveStartIdx); // ramp toward the checkpoint week (week 11, index10)
+
+  race.weeks.forEach((wk, i)=>{
     const weekNum=i+1;
-    const wk=race.weeks[i];
     const isTaper = weekNum===12;
     const isSharpen = weekNum===11;
-    const progress = Math.min(1, Math.max(0, i-startIdx)/buildSpan);
-    if(isTaper){
-      wk.forEach(day=>{
-        if(day.type!=='run') return;
+    const progress = Math.min(1, Math.max(0, i-effectiveStartIdx)/buildSpan);
+
+    wk.forEach(day=>{
+      if(day.type!=='run') return;           // never touches pilates/rest/race days
+      if(!(day.date>today)) return;          // never rewrites today or the past — only what's still ahead
+
+      if(raceDates.has(addDaysISO(day.date,1))){
+        day.title='Shakeout — Race Tomorrow'; day.note='Very easy 2–3km, stay loose, rest up'; day.off=null; return;
+      }
+      if(raceDates.has(addDaysISO(day.date,-1))){
+        day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null; return;
+      }
+
+      if(isTaper){
         if(day.day==='Tue'){ day.title='Race-Pace Touch'; day.note='2 x 1km at goal pace, rest 2 min — stay sharp, not tired'; day.off=0; }
         else if(day.day==='Wed'){ const dist=Math.max(3,Math.round(avgEasy*0.8*10)/10); day.title='Easy Run '+dist+'K'; day.note='1:30/km slower than goal pace'; day.off=90; }
         else if(day.day==='Fri'){ day.title='Shake Out Run 3K'; day.note='HR zone 2, carbo-load, early night'; day.off=null; }
-      });
-      continue;
-    }
-    wk.forEach(day=>{
-      if(day.type!=='run') return;
+        return;
+      }
       if(day.day==='Tue'){
         if(isSharpen){ day.title='Race-Pace Intervals'; day.note='3 x 1km at goal pace, rest 2 min'; day.off=0; }
         else{ const reps=4+Math.round(progress*2); day.title='Speed Intervals'; day.note=reps+' x 400m at goal pace minus 10s/km, rest 90 sec'; day.off=-10; }
@@ -784,9 +809,9 @@ function applyAdaptivePlan(race, goalTimeSec, startIdx){
       } else if(day.day==='Sat'){
         const dist=Math.max(4, Math.round(avgEasy*0.9*10)/10);
         day.title='Easy Run '+dist+'K'; day.note='Easy pace — extra aerobic volume since Sunday is now a hard effort'; day.off=90;
-      } else if(day.day==='Sun' && day.title!=='RACE DAY'){
+      } else if(day.day==='Sun'){
         const diff = currentPaceSecPerKm - goalPaceSecPerKm;
-        const targetPace = diff<=0 ? goalPaceSecPerKm : currentPaceSecPerKm - (progress*0.9)*diff; // week 11 lands ~90% of the way there, so race day is still the breakthrough
+        const targetPace = diff<=0 ? goalPaceSecPerKm : currentPaceSecPerKm - (progress*0.9)*diff;
         day.title = isSharpen ? 'Time Trial — Goal Pace Test' : 'Progressive Tempo '+raceDistKm+'K';
         day.note = isSharpen
           ? 'Full '+raceDistKm+'K at goal pace — dress rehearsal, one week out'
@@ -794,7 +819,7 @@ function applyAdaptivePlan(race, goalTimeSec, startIdx){
         day.off = Math.round(targetPace - goalPaceSecPerKm);
       }
     });
-  }
+  });
 }
 
 function renderTargetTable(race, raceDistKm, best){
@@ -951,20 +976,31 @@ $('#btnImport').onclick=()=>{
 };
 
 /* ---------- init ---------- */
-// Default: even with no target set, the plan for "now → race day" should already reflect
+// Default: even with no target set, the plan for every future day should already reflect
 // an AI recommendation from category + Strava history (not just the static base template).
-// This runs once per race (tracked by autoAdapted) so it never clobbers manual edits or a
-// later real target on subsequent loads.
+// This runs once per race on first-ever load (tracked by autoAdapted) so it never clobbers
+// manual edits later — after that, the person re-triggers it explicitly via the Refresh button.
+function getEffectiveGoalSec(race){
+  if(state.goalTimeSec) return state.goalTimeSec;
+  const best = bestRecentPaceSecPerKm(race);
+  if(!best) return null;
+  const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[race.category] || 5;
+  return riegel(best.entry.timeSec, best.entry.dist, raceDistKm);
+}
+function refreshPlan(){
+  const race = currentRace();
+  const goal = getEffectiveGoalSec(race);
+  if(goal==null){ showToast('Belum ada data log lari untuk dihitung — tambah entri dulu.', true); return; }
+  applyAdaptivePlan(race, goal);
+  showToast('Plan diperbarui dari data log & jadwal race terbaru.');
+  render();
+}
+$('#btnRefreshPlan').onclick=refreshPlan;
+
 Object.values(state.races).forEach(race=>{
   if(race.autoAdapted) return;
-  const startIdx = weekIndexForToday(race);
-  if(startIdx>=race.weeks.length){ race.autoAdapted=true; return; }
-  const best = bestRecentPaceSecPerKm(race);
-  if(best){
-    const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[race.category] || 5;
-    const pseudoGoalSec = riegel(best.entry.timeSec, best.entry.dist, raceDistKm);
-    applyAdaptivePlan(race, pseudoGoalSec, startIdx);
-  }
+  const goal = getEffectiveGoalSec(race);
+  if(goal!=null) applyAdaptivePlan(race, goal);
   race.autoAdapted=true;
 });
 
