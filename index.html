@@ -240,6 +240,10 @@
     </div>
     <div class="field"><label>Title</label><input id="fDayTitle"></div>
     <div class="field"><label>Note</label><input id="fDayNote"></div>
+    <div class="field" id="raceExtraFields" style="display:none;">
+      <label>Race distance (km)</label><input id="fRaceDist" type="number" step="0.1" placeholder="e.g. 10">
+      <label style="margin-top:8px;">Target pace (mm:ss/km, optional)</label><input id="fRacePace" placeholder="e.g. 7:15">
+    </div>
     <div class="field"><label>Swap with another day this week</label>
       <select id="fSwapDay"><option value="">— don't swap —</option></select>
     </div>
@@ -377,8 +381,8 @@ const JRF_5K_WEEKS = [
   {...PILATES_REFORMER, day:'Wed', date:'2026-09-16'},
   d('Thu','2026-09-17','run','Easy Run 6K','1:30/km slower than 5K pace',90),
   d('Fri','2026-09-18','run','Medium Run 8K','1:00/km slower than 5K pace',60),
-  d('Sat','2026-09-19','race','Fun Run 5K','easy/social pace, not a hard effort, no taper needed for this one specifically',null),
-  d('Sun','2026-09-20','race','10K Race — Target ≤7:15/km','the real target effort this weekend, hoping for 7:00–7:10/km',null) ],
+  {...d('Sat','2026-09-19','race','Fun Run 5K','easy/social pace, not a hard effort, no taper needed for this one specifically',null), raceDistKm:5, racePaceSecPerKm:null},
+  {...d('Sun','2026-09-20','race','10K Race — Target ≤7:15/km','the real target effort this weekend, hoping for 7:00–7:10/km',null), raceDistKm:10, racePaceSecPerKm:435} ],
 [ d('Mon','2026-09-21','rest','Rest','Carbo-load, hydrate, early night',null),
   d('Tue','2026-09-22','run','Interval Training','400m x10, rest 3 min, 35s/km faster than 5K pace',-35),
   {...PILATES_CHAIR, day:'Wed', date:'2026-09-23'},
@@ -460,7 +464,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 4; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 5; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -607,17 +611,68 @@ function renderDayList(){
   });
 }
 
-function reapplyRaceAdjacency(race){
+function taperDaysNeeded(distKm){
+  if(distKm==null) return 1;
+  if(distKm<=5) return 1;
+  if(distKm<=10) return 2;
+  if(distKm<=21.1) return 3;
+  return 4;
+}
+function collectRaceEntries(race){
+  const entries=[];
+  race.weeks.forEach(wk=> wk.forEach(day=>{
+    if(day.type==='race') entries.push({date:day.date, distKm: day.raceDistKm||null, paceSecPerKm: day.racePaceSecPerKm||null});
+  }));
+  return entries;
+}
+function applyRaceTaperRecovery(race){
   const today = todayISO();
-  const raceDates = new Set();
-  race.weeks.forEach(wk=> wk.forEach(day=>{ if(day.type==='race') raceDates.add(day.date); }));
+  const avgEasy = computeAvgEasyDistanceKm(race);
+  const entries = collectRaceEntries(race);
   race.weeks.forEach(wk=> wk.forEach(day=>{
     if(day.type!=='run') return;
-    if(!(day.date>today)) return; // never touches today or the past
-    if(raceDates.has(addDaysISO(day.date,1))){
-      day.title='Shakeout + Strides'; day.note='Easy 2–3km, then 4–6 x 20sec relaxed strides (not sprints) — wakes the legs up without adding fatigue'; day.off=null;
-    } else if(raceDates.has(addDaysISO(day.date,-1))){
-      day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null;
+    if(!(day.date>today)) return;
+
+    let bestTaper=null, bestRecovery=null;
+    entries.forEach(r=>{
+      const daysBefore = daysBetween(day.date, r.date);   // positive if race is after this day
+      const daysAfter = daysBetween(r.date, day.date);    // positive if this day is after the race
+      const need = taperDaysNeeded(r.distKm);
+      if(daysBefore>0 && daysBefore<=need){
+        const level = need-daysBefore+1;
+        if(!bestTaper || level<bestTaper.level) bestTaper={level, race:r};
+      }
+      if(daysAfter>0 && daysAfter<=need){
+        const level = need-daysAfter+1;
+        if(!bestRecovery || level<bestRecovery.level) bestRecovery={level, race:r};
+      }
+    });
+
+    const hit = bestTaper && (!bestRecovery || bestTaper.level<=bestRecovery.level) ? {kind:'taper', ...bestTaper}
+              : bestRecovery ? {kind:'recovery', ...bestRecovery} : null;
+    if(!hit) return;
+
+    const paceNote = hit.race.paceSecPerKm ? ` (upcoming race target ~${secToMMSS(hit.race.paceSecPerKm)}/km)` : '';
+    if(hit.kind==='taper'){
+      if(hit.level===1){
+        day.title='Shakeout + Strides'; day.note='Easy 2–3km, then 4–6 x 20sec relaxed strides'+paceNote+' — wakes the legs up without adding fatigue'; day.off=null;
+      } else if(hit.level===2){
+        const dist=Math.max(3,Math.round(avgEasy*0.6*10)/10);
+        day.title='Reduced Easy Run '+dist+'K'; day.note='Easy pace, lighter than usual — race in '+ (hit.level) +' days'+paceNote; day.off=90;
+      } else {
+        const dist=Math.max(3,Math.round(avgEasy*0.8*10)/10);
+        day.title='Light Easy Run '+dist+'K'; day.note='Easy pace, slightly reduced ahead of the upcoming race'+paceNote; day.off=90;
+      }
+    } else {
+      if(hit.level===1){
+        day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null;
+      } else if(hit.level===2){
+        const dist=Math.max(3,Math.round(avgEasy*0.7*10)/10);
+        day.title='Easy Recovery Run '+dist+'K'; day.note='Still recovering from the race a couple days ago, keep it easy'; day.off=90;
+      } else {
+        const dist=Math.max(3,Math.round(avgEasy*0.9*10)/10);
+        day.title='Easy Run '+dist+'K'; day.note='Back to normal easy running, recovery from the recent race'; day.off=90;
+      }
     }
   }));
 }
@@ -628,6 +683,11 @@ function openDayModal(idx){
   $('#fDayType').value=day.type;
   $('#fDayTitle').value=day.title;
   $('#fDayNote').value=day.note||'';
+  $('#fRaceDist').value = day.raceDistKm!=null ? day.raceDistKm : '';
+  $('#fRacePace').value = day.racePaceSecPerKm!=null ? secToMMSS(day.racePaceSecPerKm) : '';
+  const toggleRaceFields=()=>{ $('#raceExtraFields').style.display = $('#fDayType').value==='race' ? 'block' : 'none'; };
+  toggleRaceFields();
+  $('#fDayType').onchange=toggleRaceFields;
   const sw=$('#fSwapDay'); sw.innerHTML='<option value="">— don\'t swap —</option>';
   wk.forEach((dd,i)=>{ if(i!==idx){ const o=document.createElement('option'); o.value=i; o.textContent=dd.day+' — '+dd.title; sw.appendChild(o);} });
   $('#dayOverlay').classList.add('show');
@@ -635,13 +695,20 @@ function openDayModal(idx){
     const swapIdx=sw.value;
     if(swapIdx!==''){
       const a=wk[idx], b=wk[parseInt(swapIdx)];
-      const tmp={type:a.type,title:a.title,note:a.note,off:a.off};
-      a.type=b.type; a.title=b.title; a.note=b.note; a.off=b.off;
-      b.type=tmp.type; b.title=tmp.title; b.note=tmp.note; b.off=tmp.off;
+      const tmp={type:a.type,title:a.title,note:a.note,off:a.off,raceDistKm:a.raceDistKm,racePaceSecPerKm:a.racePaceSecPerKm};
+      a.type=b.type; a.title=b.title; a.note=b.note; a.off=b.off; a.raceDistKm=b.raceDistKm; a.racePaceSecPerKm=b.racePaceSecPerKm;
+      b.type=tmp.type; b.title=tmp.title; b.note=tmp.note; b.off=tmp.off; b.raceDistKm=tmp.raceDistKm; b.racePaceSecPerKm=tmp.racePaceSecPerKm;
     } else {
       day.type=$('#fDayType').value; day.title=$('#fDayTitle').value; day.note=$('#fDayNote').value;
+      if(day.type==='race'){
+        const dist=parseFloat($('#fRaceDist').value);
+        day.raceDistKm = isNaN(dist)? null : dist;
+        day.racePaceSecPerKm = mmssToSec($('#fRacePace').value) || null;
+      } else {
+        day.raceDistKm=null; day.racePaceSecPerKm=null;
+      }
     }
-    reapplyRaceAdjacency(r); // if this edit added/removed a race, neighboring days react immediately
+    applyAdaptivePlan(r, getEffectiveGoalSec(r), {afterDate: day.date, onlyWeekIndex: state.selectedWeek-1}); // recalculate the rest of this week's recommendation from the edited day forward
     $('#dayOverlay').classList.remove('show');
     render();
   };
@@ -769,40 +836,30 @@ function computeAvgEasyDistanceKm(race){
 
 function addDaysISO(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
-function applyAdaptivePlan(race, goalTimeSec){
+function applyAdaptivePlan(race, goalTimeSec, bounds){
+  const afterDate = (bounds && bounds.afterDate) || todayISO();
+  const onlyWeekIndex = bounds ? bounds.onlyWeekIndex : null; // null/undefined = every week from afterDate onward
+
   const avgEasy = computeAvgEasyDistanceKm(race);
   const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[race.category] || 5;
   const goalPaceSecPerKm = goalTimeSec/raceDistKm;
   const bestEffort = bestRecentPaceSecPerKm(race);
   const currentPaceSecPerKm = bestEffort ? riegel(bestEffort.entry.timeSec, bestEffort.entry.dist, raceDistKm)/raceDistKm : goalPaceSecPerKm;
-  const today = todayISO();
 
-  // Any day (anywhere in the plan) marked type 'race' is a real scheduled race — main race
-  // or an ad-hoc one the user inserted — and always protected from regeneration, plus it
-  // taper/recovery-shapes the days immediately around it.
-  const raceDates = new Set();
-  race.weeks.forEach(wk=> wk.forEach(day=>{ if(day.type==='race') raceDates.add(day.date); }));
-
-  const curWeekIdx1 = weekIndexForToday(race); // 1-based; used only to anchor the build-up progression
+  const curWeekIdx1 = weekIndexForToday(race); // 1-based; used only to anchor the build-up progression — stays tied to "today", not to whichever week is being edited
   const effectiveStartIdx = Math.max(0, Math.min(curWeekIdx1>0? curWeekIdx1-1 : 0, race.weeks.length-1));
   const buildSpan = Math.max(1, 10-effectiveStartIdx); // ramp toward the checkpoint week (week 11, index10)
 
   race.weeks.forEach((wk, i)=>{
+    if(onlyWeekIndex!=null && i!==onlyWeekIndex) return; // scoped edit: only regenerate the week being edited
     const weekNum=i+1;
     const isTaper = weekNum===12;
     const isSharpen = weekNum===11;
     const progress = Math.min(1, Math.max(0, i-effectiveStartIdx)/buildSpan);
 
     wk.forEach(day=>{
-      if(day.type!=='run') return;           // never touches pilates/rest/race days
-      if(!(day.date>today)) return;          // never rewrites today or the past — only what's still ahead
-
-      if(raceDates.has(addDaysISO(day.date,1))){
-        day.title='Shakeout + Strides'; day.note='Easy 2–3km, then 4–6 x 20sec relaxed strides (not sprints) — wakes the legs up without adding fatigue'; day.off=null; return;
-      }
-      if(raceDates.has(addDaysISO(day.date,-1))){
-        day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null; return;
-      }
+      if(day.type!=='run') return;             // never touches pilates/rest/race days
+      if(!(day.date>afterDate)) return;        // never rewrites the edited day itself, today, or the past
 
       if(isTaper){
         if(day.day==='Tue'){ day.title='Race-Pace Touch'; day.note='2 x 1km at goal pace, rest 2 min — stay sharp, not tired'; day.off=0; }
@@ -836,6 +893,8 @@ function applyAdaptivePlan(race, goalTimeSec){
       }
     });
   });
+
+  applyRaceTaperRecovery(race); // overrides any of the above wherever a nearby race (main or ad-hoc) calls for taper/recovery
 }
 
 function renderTargetTable(race, raceDistKm, best){
