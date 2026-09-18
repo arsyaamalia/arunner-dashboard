@@ -468,16 +468,16 @@ const STRAVA_SEED = [
   {date:'2026-09-13', name:"Pasuruan Women's Run 2026", dist:4.30, timeSec:1803, effort:'hard'},
   {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790, effort:'easy'},
   {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944, effort:'hard'},
-  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.06, timeSec:2062, effort:'hard'},
+  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.0, timeSec:2034, effort:'hard'}, // using Strava's Fastest 5K segment (33:54), not the whole 5.06km activity average (34:22) which is diluted by warmup
   {date:'2026-09-04', name:'Morning Zone 2 Run (again)', dist:5.05, timeSec:2840, effort:'easy'},
   {date:'2026-09-03', name:'Morning Interval Run', dist:2.75, timeSec:1026, effort:'hard'},
   {date:'2026-09-02', name:'Morning Zone 2 Run', dist:5.06, timeSec:2768, effort:'easy'},
   {date:'2026-08-30', name:'Lunch Run', dist:5.05, timeSec:2678, effort:'easy'},
-  {date:'2026-08-29', name:'Evening Run', dist:5.05, timeSec:2241, effort:'hard'},
+  {date:'2026-08-29', name:'Evening Run', dist:5.0, timeSec:2222, effort:'hard'}, // using Strava's Fastest 5K segment (37:02), not the whole 5.05km activity average
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 8; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 9; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -860,15 +860,34 @@ function riegel(t1,d1,d2){ return t1*Math.pow(d2/d1,1.06); }
 // without just memorizing noise.
 function personalizedPrediction(race, raceDistKm){
   const entries = race.log.filter(l=>l.dist>=1.5 && l.timeSec>0 && l.effort==='hard');
-  const MIN_POINTS = 4;
-  if(entries.length < MIN_POINTS){
+
+  // Collapse to a personal-best-per-distance curve: bucket entries whose distance is
+  // within 15% of each other, keep only the fastest pace in each bucket. A "bad day" at
+  // a distance you've already beaten shouldn't drag the prediction down — race day is a
+  // peaked effort, closer to your best days than your average ones.
+  const sorted = [...entries].sort((a,b)=>a.dist-b.dist);
+  const bests = [];
+  sorted.forEach(l=>{
+    const bucket = bests.find(b => Math.abs(b.dist-l.dist)/l.dist < 0.15);
+    const pace = l.timeSec/l.dist;
+    if(!bucket) bests.push({dist:l.dist, timeSec:l.timeSec, date:l.date, name:l.name});
+    else if(pace < bucket.timeSec/bucket.dist){ bucket.dist=l.dist; bucket.timeSec=l.timeSec; bucket.date=l.date; bucket.name=l.name; }
+  });
+
+  const MIN_POINTS = 3;
+  if(bests.length < MIN_POINTS){
     const best = bestRecentPaceSecPerKm(race);
     if(!best) return null;
     return { method:'single-best', n:entries.length, predictedSec: riegel(best.entry.timeSec, best.entry.dist, raceDistKm), entry:best.entry };
   }
+
+  // If a PB already exists at (or very near) the target distance, that's the anchor —
+  // no fitted line should be allowed to extrapolate below a result already on the board.
+  const directHit = bests.find(b => Math.abs(b.dist-raceDistKm)/raceDistKm < 0.1);
+
   const today = new Date(todayISO()+'T00:00:00');
   const HALF_LIFE_DAYS = 21;
-  const pts = entries.map(l=>{
+  const pts = bests.map(l=>{
     const daysAgo = Math.max(0, (today - new Date(l.date+'T00:00:00')) / 86400000);
     const w = Math.pow(0.5, daysAgo/HALF_LIFE_DAYS);
     return { x: Math.log(l.dist), y: Math.log(l.timeSec), w };
@@ -880,10 +899,15 @@ function personalizedPrediction(race, raceDistKm){
   let b = denom!==0 ? (swxy - sw*meanX*meanY)/denom : 1.06;
   b = Math.max(0.85, Math.min(1.25, b)); // clamp to a physiologically sane range — sparse/noisy data can otherwise fit a nonsense slope
   const a = meanY - b*meanX;
-  const predictedSec = Math.exp(a + b*Math.log(raceDistKm));
   let sse=0; pts.forEach(p=>{ const pred=a+b*p.x; sse += p.w*(p.y-pred)**2; });
-  const residSD = Math.sqrt(sse/sw); // in log-space
-  return { method:'regression', n:entries.length, predictedSec, exponent:b, residSD };
+  const residSD = pts.length>1 ? Math.sqrt(sse/sw) : 0.03; // in log-space, used for the confidence range either way
+
+  if(directHit){
+    const predictedSec = riegel(directHit.timeSec, directHit.dist, raceDistKm); // near-1.0 extrapolation since directHit.dist ≈ raceDistKm
+    return { method:'direct-pb', n:bests.length, predictedSec, exponent:b, residSD, anchor:directHit };
+  }
+  const predictedSec = Math.exp(a + b*Math.log(raceDistKm));
+  return { method:'regression', n:bests.length, predictedSec, exponent:b, residSD };
 }
 
 function renderMode(){
@@ -899,12 +923,19 @@ function renderMode(){
     }
     const predictedSec = pred.predictedSec;
     let rangeLow, rangeHigh, methodBox;
-    if(pred.method==='regression'){
+    if(pred.method==='direct-pb'){
+      const lo = Math.exp(Math.log(predictedSec) - pred.residSD*0.5); // tighter range — this is a direct measurement, not an extrapolation
+      const hi = Math.exp(Math.log(predictedSec) + pred.residSD);
+      rangeLow=lo; rangeHigh=hi;
+      methodBox = `<b>Method:</b> your own best effort already at (or very near) ${raceDistKm}K — <b>${pred.anchor.name}</b> on ${fmtDate(pred.anchor.date)} (${pred.anchor.dist.toFixed(2)}km in ${secToMMSS(pred.anchor.timeSec)}). This is used directly rather than a fitted curve, because a proven result at this exact distance beats any extrapolation from other distances.
+        <br><br>Your personalized pace-vs-distance curve (from ${pred.n} personal bests across different distances, exponent ${pred.exponent.toFixed(2)}) is used only to set the confidence range above, based on how consistent your pacing has been across distances so far.
+        <br><br>This is a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number.`;
+    } else if(pred.method==='regression'){
       const lo = Math.exp(Math.log(predictedSec) - pred.residSD);
       const hi = Math.exp(Math.log(predictedSec) + pred.residSD);
       rangeLow=lo; rangeHigh=hi;
-      methodBox = `<b>Method:</b> weighted regression fit to your ${pred.n} logged <b>hard-effort</b> runs (tempo/interval/race, 1.5km+) — easy/aerobic runs are deliberately excluded since mixing them in would bias the curve toward being too slow. Recent runs are weighted more heavily (21-day half-life) so it reflects current fitness.
-        <br><br>This is a personalized model fit to your own data, not a single best-effort extrapolation — it's less swayed by any one unusually good or bad day. The range above reflects how tightly your actual runs fit that curve; a wide range means your pacing across distances has been inconsistent so far.
+      methodBox = `<b>Method:</b> weighted regression fit to your ${pred.n} personal-best-per-distance points (from hard-effort tempo/interval/race logs — easy runs excluded, and any repeated distance uses only your fastest result there, not an average). Recent bests are weighted more heavily.
+        <br><br>You don't have a logged effort at (or near) ${raceDistKm}K yet, so this extrapolates from the distances you do have data at. The range reflects how consistent your pacing has been across those distances.
         <br><br>This is still a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number.`;
     } else {
       rangeLow = predictedSec*0.985; rangeHigh = predictedSec*1.03;
