@@ -495,10 +495,28 @@ function loadLocal(){
   return null;
 }
 const restored = loadLocal();
-if(restored && restored.schemaVersion===SCHEMA_VERSION) state = restored;
-// else: a structural update shipped since the cached copy was saved — keep the fresh
-// defaults above (any manual edits in the stale cache are lost, but silently serving
-// outdated plan data would be worse).
+if(restored && restored.schemaVersion===SCHEMA_VERSION){
+  state = restored;
+} else if(restored){
+  // A structural update shipped since this was cached. Refresh the base template, but
+  // carry forward what's unquestionably the person's own data: logged activities,
+  // their goal, and any day they explicitly edited or swapped (marked userEdited).
+  state.goalTimeSec = restored.goalTimeSec!=null ? restored.goalTimeSec : state.goalTimeSec;
+  state.mode = restored.mode || state.mode;
+  Object.keys(restored.races||{}).forEach(rid=>{
+    const oldRace = restored.races[rid], freshRace = state.races[rid];
+    if(!freshRace || !oldRace) return;
+    freshRace.log = (freshRace.log||[]).concat((oldRace.log||[]).filter(l=> !String(l.id).startsWith('seed'))); // fresh seed data wins for anything Claude synced, but entries the person added manually via +Add entry are preserved
+    freshRace.autoAdapted = false; // let auto-adapt recompute future days fresh against the new logic/template
+    const oldByDate = {};
+    (oldRace.weeks||[]).forEach(wk=> wk.forEach(day=>{ if(day.userEdited) oldByDate[day.date]=day; }));
+    freshRace.weeks.forEach(wk=> wk.forEach(day=>{
+      const old = oldByDate[day.date];
+      if(old){ day.type=old.type; day.title=old.title; day.note=old.note; day.off=old.off; day.raceDistKm=old.raceDistKm; day.racePaceSecPerKm=old.racePaceSecPerKm; day.userEdited=true; }
+    }));
+  });
+  state.schemaVersion = SCHEMA_VERSION;
+}
 
 function currentRace(){ return state.races[state.activeRaceId]; }
 
@@ -698,6 +716,7 @@ function openDayModal(idx){
       const tmp={type:a.type,title:a.title,note:a.note,off:a.off,raceDistKm:a.raceDistKm,racePaceSecPerKm:a.racePaceSecPerKm};
       a.type=b.type; a.title=b.title; a.note=b.note; a.off=b.off; a.raceDistKm=b.raceDistKm; a.racePaceSecPerKm=b.racePaceSecPerKm;
       b.type=tmp.type; b.title=tmp.title; b.note=tmp.note; b.off=tmp.off; b.raceDistKm=tmp.raceDistKm; b.racePaceSecPerKm=tmp.racePaceSecPerKm;
+      a.userEdited=true; b.userEdited=true; // both halves of a swap must survive future schema migrations
     } else {
       day.type=$('#fDayType').value; day.title=$('#fDayTitle').value; day.note=$('#fDayNote').value;
       if(day.type==='race'){
@@ -707,6 +726,7 @@ function openDayModal(idx){
       } else {
         day.raceDistKm=null; day.racePaceSecPerKm=null;
       }
+      day.userEdited=true;
     }
     applyAdaptivePlan(r, getEffectiveGoalSec(r), {afterDate: day.date, onlyWeekIndex: state.selectedWeek-1}); // recalculate the rest of this week's recommendation from the edited day forward
     $('#dayOverlay').classList.remove('show');
