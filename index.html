@@ -283,6 +283,12 @@
 <div class="overlay" id="logOverlay">
   <div class="modal">
     <h3>Add training log entry</h3>
+    <div class="field">
+      <label>Upload GPX (from Strava: activity → ⋯ menu → Export GPX)</label>
+      <input id="fLogGpx" type="file" accept=".gpx">
+      <div id="gpxStatus" style="font-size:11.5px;color:var(--plum-soft);margin-top:6px;"></div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--plum-soft);margin:4px 0 12px;">— or fill in manually —</div>
     <div class="field"><label>Date</label><input id="fLogDate" type="date"></div>
     <div class="field"><label>Activity name</label><input id="fLogName" placeholder="Morning Zone 2 Run"></div>
     <div class="field"><label>Distance (km)</label><input id="fLogDist" type="number" step="0.01"></div>
@@ -763,9 +769,59 @@ function renderLog(){
 
 $('#btnAddLog').onclick=()=>{
   $('#fLogDate').value=todayISO(); $('#fLogName').value=''; $('#fLogDist').value=''; $('#fLogTime').value='';
+  $('#fLogGpx').value=''; $('#gpxStatus').textContent='';
   $('#logOverlay').classList.add('show');
 };
 $('#cancelLog').onclick=()=>$('#logOverlay').classList.remove('show');
+
+function haversineMeters(lat1,lon1,lat2,lon2){
+  const R=6371000, toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function parseGPX(xmlText){
+  const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
+  if(xml.getElementsByTagName('parsererror').length) return null;
+  const trkpts = Array.from(xml.getElementsByTagName('trkpt'));
+  if(trkpts.length<2) return null;
+  let totalM=0, prevLat=null, prevLon=null;
+  const times=[];
+  trkpts.forEach(pt=>{
+    const lat=parseFloat(pt.getAttribute('lat')), lon=parseFloat(pt.getAttribute('lon'));
+    const timeEl=pt.getElementsByTagName('time')[0];
+    if(timeEl && timeEl.textContent) times.push(new Date(timeEl.textContent));
+    if(prevLat!=null) totalM += haversineMeters(prevLat,prevLon,lat,lon);
+    prevLat=lat; prevLon=lon;
+  });
+  const distKm = Math.round((totalM/1000)*100)/100;
+  let timeSec = times.length>=2 ? Math.round((times[times.length-1]-times[0])/1000) : null;
+  let dateISO = null;
+  if(times.length){ const d=times[0]; dateISO = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  const nameEl = xml.querySelector('trk > name') || xml.getElementsByTagName('name')[0];
+  const name = (nameEl && nameEl.textContent.trim()) || 'GPX Import';
+  return {name, dateISO, distKm, timeSec};
+}
+$('#fLogGpx').onchange=(e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const parsed = parseGPX(reader.result);
+    if(!parsed || !parsed.distKm){
+      $('#gpxStatus').style.color='var(--coral-deep)'; $('#gpxStatus').textContent='Could not read track points from this file — fill in manually below.';
+      return;
+    }
+    $('#fLogName').value = parsed.name;
+    if(parsed.dateISO) $('#fLogDate').value = parsed.dateISO;
+    $('#fLogDist').value = parsed.distKm;
+    if(parsed.timeSec) $('#fLogTime').value = secToMMSS(parsed.timeSec);
+    $('#gpxStatus').style.color='var(--teal-deep)';
+    $('#gpxStatus').textContent = `Parsed: ${parsed.distKm}km` + (parsed.timeSec? `, ${secToMMSS(parsed.timeSec)}`:'') + ' — review below, then click Add.' + (parsed.timeSec? '' : ' (no timestamps in file, fill in time manually)');
+  };
+  reader.onerror=()=>{ $('#gpxStatus').style.color='var(--coral-deep)'; $('#gpxStatus').textContent='Could not read that file.'; };
+  reader.readAsText(file);
+};
+
 $('#saveLog').onclick=()=>{
   const r=currentRace();
   const t=mmssToSec($('#fLogTime').value);
