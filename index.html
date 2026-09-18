@@ -470,7 +470,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 6; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 7; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -689,7 +689,7 @@ function applyRaceTaperRecovery(race){
       }
     } else {
       if(hit.level===1){
-        day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null;
+        day.title='Recovery — Day After Race'; day.note='Easy 15–25min jog if your legs feel fine, or full rest if not — nowhere near race effort, this is about recovery not training'; day.off=null;
       } else if(hit.level===2){
         const dist=Math.max(3,Math.round(avgEasy*0.7*10)/10);
         day.title='Easy Recovery Run '+dist+'K'; day.note='Still recovering from the race a couple days ago, keep it easy'; day.off=90;
@@ -991,9 +991,9 @@ function renderTargetTable(race, raceDistKm, best){
     }
   }
   const wk = race.weeks[state.selectedWeek-1];
-  const rows = wk.filter(x=>x.type==='run' && x.off!==null && x.title!=='RACE DAY').map(x=>{
-    const p = goalPaceSecPerKm + x.off;
-    return `<tr><td>${x.day} — ${x.title}</td><td class="p">${secToMMSS(p)}/km</td></tr>`;
+  const rows = wk.filter(x=>x.type==='run' && x.title!=='RACE DAY').map(x=>{
+    const p = x.off!=null ? goalPaceSecPerKm + x.off : null;
+    return `<tr><td>${x.day} — ${x.title}</td><td class="p">${p!=null? secToMMSS(p)+'/km' : 'Easy — no set pace'}</td></tr>`;
   }).join('');
   out.innerHTML = `
     <div class="method-box"><b>Target pace:</b> ${secToMMSS(goalPaceSecPerKm)}/km to hit ${secToMMSS(state.goalTimeSec)}.${gapNote}</div>
