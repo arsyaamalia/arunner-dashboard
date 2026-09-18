@@ -293,6 +293,10 @@
     <div class="field"><label>Activity name</label><input id="fLogName" placeholder="Morning Zone 2 Run"></div>
     <div class="field"><label>Distance (km)</label><input id="fLogDist" type="number" step="0.01"></div>
     <div class="field"><label>Time (mm:ss)</label><input id="fLogTime" placeholder="45:30"></div>
+    <div class="field" style="display:flex;align-items:center;gap:8px;">
+      <input id="fLogHardEffort" type="checkbox" style="width:auto;">
+      <label style="margin:0;font-weight:600;">This was a hard effort (tempo, interval, or race) — use it for pace prediction</label>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancelLog">Cancel</button>
       <button class="btn btn-primary" id="saveLog">Add</button>
@@ -454,23 +458,26 @@ function genericTemplate(category, raceDate){
   return weeks;
 }
 
-/* ---------- Seed Strava activities (from athlete's real recent log) ---------- */
+/* ---------- Seed Strava activities (from athlete's real recent log) ----------
+   effort: 'hard' = tempo/interval/race, close to genuine effort, usable for pace prediction.
+           'easy' = aerobic/zone2 volume, deliberately slow, excluded from pace prediction
+           (mixing it in biases a Riegel-style curve toward being too pessimistic). */
 const STRAVA_SEED = [
-  {date:'2026-09-17', name:'anggep aja Long Run plz', dist:8.89, timeSec:3999},
-  {date:'2026-09-16', name:'Morning Interval Run (failed)', dist:1.87, timeSec:736},
-  {date:'2026-09-13', name:"Pasuruan Women's Run 2026", dist:4.30, timeSec:1803},
-  {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790},
-  {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944},
-  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.06, timeSec:2062},
-  {date:'2026-09-04', name:'Morning Zone 2 Run (again)', dist:5.05, timeSec:2840},
-  {date:'2026-09-03', name:'Morning Interval Run', dist:2.75, timeSec:1026},
-  {date:'2026-09-02', name:'Morning Zone 2 Run', dist:5.06, timeSec:2768},
-  {date:'2026-08-30', name:'Lunch Run', dist:5.05, timeSec:2678},
-  {date:'2026-08-29', name:'Evening Run', dist:5.05, timeSec:2241},
+  {date:'2026-09-17', name:'anggep aja Long Run plz', dist:8.89, timeSec:3999, effort:'easy'},
+  {date:'2026-09-16', name:'Morning Interval Run (failed)', dist:1.87, timeSec:736, effort:'hard'},
+  {date:'2026-09-13', name:"Pasuruan Women's Run 2026", dist:4.30, timeSec:1803, effort:'hard'},
+  {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790, effort:'easy'},
+  {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944, effort:'hard'},
+  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.06, timeSec:2062, effort:'hard'},
+  {date:'2026-09-04', name:'Morning Zone 2 Run (again)', dist:5.05, timeSec:2840, effort:'easy'},
+  {date:'2026-09-03', name:'Morning Interval Run', dist:2.75, timeSec:1026, effort:'hard'},
+  {date:'2026-09-02', name:'Morning Zone 2 Run', dist:5.06, timeSec:2768, effort:'easy'},
+  {date:'2026-08-30', name:'Lunch Run', dist:5.05, timeSec:2678, effort:'easy'},
+  {date:'2026-08-29', name:'Evening Run', dist:5.05, timeSec:2241, effort:'hard'},
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 7; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 8; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -768,7 +775,7 @@ function renderLog(){
 }
 
 $('#btnAddLog').onclick=()=>{
-  $('#fLogDate').value=todayISO(); $('#fLogName').value=''; $('#fLogDist').value=''; $('#fLogTime').value='';
+  $('#fLogDate').value=todayISO(); $('#fLogName').value=''; $('#fLogDist').value=''; $('#fLogTime').value=''; $('#fLogHardEffort').checked=false;
   $('#fLogGpx').value=''; $('#gpxStatus').textContent='';
   $('#logOverlay').classList.add('show');
 };
@@ -827,15 +834,16 @@ $('#saveLog').onclick=()=>{
   const t=mmssToSec($('#fLogTime').value);
   const dist=parseFloat($('#fLogDist').value);
   if(!$('#fLogDate').value || !dist || !t){ showToast('Isi tanggal, jarak, dan waktu dengan benar (mm:ss).', true); return; }
-  r.log.push({id:'l'+Date.now(), date:$('#fLogDate').value, name:$('#fLogName').value||'Run', dist, timeSec:t});
+  r.log.push({id:'l'+Date.now(), date:$('#fLogDate').value, name:$('#fLogName').value||'Run', dist, timeSec:t, effort: $('#fLogHardEffort').checked ? 'hard' : 'easy'});
   $('#logOverlay').classList.remove('show');
   render();
 };
 
 /* ---------- Prediction / Target ---------- */
 function bestRecentPaceSecPerKm(race){
-  // Best (fastest) pace among non-race training logs of reasonable length (>=2km), as the cleanest fitness signal.
-  const candidates = race.log.filter(l=>l.dist>=2);
+  // Best (fastest) pace among hard-effort logs of reasonable length (>=2km) — easy/aerobic
+  // runs are excluded on purpose, mixing them in biases any race-time extrapolation.
+  const candidates = race.log.filter(l=>l.dist>=2 && l.effort==='hard');
   if(candidates.length===0) return null;
   let best=null;
   candidates.forEach(l=>{ const p=l.timeSec/l.dist; if(!best || p<best.pace) best={pace:p, entry:l}; });
@@ -843,28 +851,73 @@ function bestRecentPaceSecPerKm(race){
 }
 function riegel(t1,d1,d2){ return t1*Math.pow(d2/d1,1.06); }
 
+// Personalized power-law regression: fits T = a * D^b to the person's HARD-EFFORT logged
+// runs only (tempo/interval/race — easy volume is excluded, see bestRecentPaceSecPerKm),
+// with more recent runs weighted more heavily (21-day half-life) so the curve reflects
+// current fitness rather than being dragged down by an old log. This is ordinary weighted
+// least squares — the simplest real form of machine learning — chosen deliberately over
+// anything fancier because ~10-20 data points is not enough to fit anything more complex
+// without just memorizing noise.
+function personalizedPrediction(race, raceDistKm){
+  const entries = race.log.filter(l=>l.dist>=1.5 && l.timeSec>0 && l.effort==='hard');
+  const MIN_POINTS = 4;
+  if(entries.length < MIN_POINTS){
+    const best = bestRecentPaceSecPerKm(race);
+    if(!best) return null;
+    return { method:'single-best', n:entries.length, predictedSec: riegel(best.entry.timeSec, best.entry.dist, raceDistKm), entry:best.entry };
+  }
+  const today = new Date(todayISO()+'T00:00:00');
+  const HALF_LIFE_DAYS = 21;
+  const pts = entries.map(l=>{
+    const daysAgo = Math.max(0, (today - new Date(l.date+'T00:00:00')) / 86400000);
+    const w = Math.pow(0.5, daysAgo/HALF_LIFE_DAYS);
+    return { x: Math.log(l.dist), y: Math.log(l.timeSec), w };
+  });
+  let sw=0, swx=0, swy=0, swxx=0, swxy=0;
+  pts.forEach(p=>{ sw+=p.w; swx+=p.w*p.x; swy+=p.w*p.y; swxx+=p.w*p.x*p.x; swxy+=p.w*p.x*p.y; });
+  const meanX=swx/sw, meanY=swy/sw;
+  const denom = swxx - sw*meanX*meanX;
+  let b = denom!==0 ? (swxy - sw*meanX*meanY)/denom : 1.06;
+  b = Math.max(0.85, Math.min(1.25, b)); // clamp to a physiologically sane range — sparse/noisy data can otherwise fit a nonsense slope
+  const a = meanY - b*meanX;
+  const predictedSec = Math.exp(a + b*Math.log(raceDistKm));
+  let sse=0; pts.forEach(p=>{ const pred=a+b*p.x; sse += p.w*(p.y-pred)**2; });
+  const residSD = Math.sqrt(sse/sw); // in log-space
+  return { method:'regression', n:entries.length, predictedSec, exponent:b, residSD };
+}
+
 function renderMode(){
   const r=currentRace();
   const slot=$('#modeSlot');
   const raceDistKm = {'5K':5,'10K':10,'21K':21.1,'42K':42.2}[r.category] || 5;
 
   if(state.mode==='predict'){
-    const best=bestRecentPaceSecPerKm(r);
-    if(!best){
+    const pred = personalizedPrediction(r, raceDistKm);
+    if(!pred){
       slot.innerHTML=`<div class="method-box">No training log entries yet — add at least one run to get a prediction.</div>`;
       return;
     }
-    const predictedSec = riegel(best.entry.timeSec, best.entry.dist, raceDistKm);
-    const rangeLow = predictedSec*0.985, rangeHigh = predictedSec*1.03;
+    const predictedSec = pred.predictedSec;
+    let rangeLow, rangeHigh, methodBox;
+    if(pred.method==='regression'){
+      const lo = Math.exp(Math.log(predictedSec) - pred.residSD);
+      const hi = Math.exp(Math.log(predictedSec) + pred.residSD);
+      rangeLow=lo; rangeHigh=hi;
+      methodBox = `<b>Method:</b> weighted regression fit to your ${pred.n} logged <b>hard-effort</b> runs (tempo/interval/race, 1.5km+) — easy/aerobic runs are deliberately excluded since mixing them in would bias the curve toward being too slow. Recent runs are weighted more heavily (21-day half-life) so it reflects current fitness.
+        <br><br>This is a personalized model fit to your own data, not a single best-effort extrapolation — it's less swayed by any one unusually good or bad day. The range above reflects how tightly your actual runs fit that curve; a wide range means your pacing across distances has been inconsistent so far.
+        <br><br>This is still a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number.`;
+    } else {
+      rangeLow = predictedSec*0.985; rangeHigh = predictedSec*1.03;
+      methodBox = `<b>Method:</b> Riegel formula (T₂ = T₁ × (D₂/D₁)^1.06), extrapolated from your fastest logged effort of 2km or more — <b>${pred.entry.name}</b> on ${fmtDate(pred.entry.date)} (${pred.entry.dist.toFixed(2)}km in ${secToMMSS(pred.entry.timeSec)}, ${secToMMSS(pred.entry.timeSec/pred.entry.dist)}/km).
+        <br><br>Using this simpler method because there are only ${pred.n} logged hard-effort runs (1.5km+) so far — once you have at least 4, this upgrades automatically to a personalized regression fit to all of them instead of just one. Mark a run as hard effort in the log entry form when it's a tempo, interval, or race.
+        <br><br>This is a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number.`;
+    }
     slot.innerHTML=`
       <div class="pred-number">
         <div class="val">${secToMMSS(predictedSec)}</div>
         <div class="sub">predicted ${r.category} time · range ${secToMMSS(rangeLow)}–${secToMMSS(rangeHigh)}</div>
       </div>
-      <div class="method-box">
-        <b>Method:</b> Riegel formula (T₂ = T₁ × (D₂/D₁)^1.06), extrapolated from your fastest logged effort of 2km or more — <b>${best.entry.name}</b> on ${fmtDate(best.entry.date)} (${best.entry.dist.toFixed(2)}km in ${secToMMSS(best.entry.timeSec)}, ${secToMMSS(best.entry.timeSec/best.entry.dist)}/km).
-        <br><br>This is a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number. Log more sessions as race day nears and this updates automatically.
-      </div>`;
+      <div class="method-box">${methodBox}</div>`;
   } else {
     const best=bestRecentPaceSecPerKm(r);
     slot.innerHTML=`
