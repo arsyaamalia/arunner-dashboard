@@ -464,7 +464,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 5; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 6; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -626,7 +626,7 @@ function collectRaceEntries(race){
   return entries;
 }
 function applyRaceTaperRecovery(race){
-  const today = todayISO();
+  const today = addDaysISO(todayISO(), -1); // shifted so today itself is still eligible to regenerate, only yesterday and earlier are frozen
   const avgEasy = computeAvgEasyDistanceKm(race);
   const entries = collectRaceEntries(race);
   race.weeks.forEach(wk=> wk.forEach(day=>{
@@ -837,7 +837,7 @@ function computeAvgEasyDistanceKm(race){
 function addDaysISO(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function applyAdaptivePlan(race, goalTimeSec, bounds){
-  const afterDate = (bounds && bounds.afterDate) || todayISO();
+  const afterDate = (bounds && bounds.afterDate) || addDaysISO(todayISO(), -1); // shifted so today is included in a full "from now on" regeneration; the scoped edit-call still passes the edited day's own date explicitly and stays exclusive of it
   const onlyWeekIndex = bounds ? bounds.onlyWeekIndex : null; // null/undefined = every week from afterDate onward
 
   const avgEasy = computeAvgEasyDistanceKm(race);
