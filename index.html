@@ -607,6 +607,21 @@ function renderDayList(){
   });
 }
 
+function reapplyRaceAdjacency(race){
+  const today = todayISO();
+  const raceDates = new Set();
+  race.weeks.forEach(wk=> wk.forEach(day=>{ if(day.type==='race') raceDates.add(day.date); }));
+  race.weeks.forEach(wk=> wk.forEach(day=>{
+    if(day.type!=='run') return;
+    if(!(day.date>today)) return; // never touches today or the past
+    if(raceDates.has(addDaysISO(day.date,1))){
+      day.title='Shakeout + Strides'; day.note='Easy 2–3km, then 4–6 x 20sec relaxed strides (not sprints) — wakes the legs up without adding fatigue'; day.off=null;
+    } else if(raceDates.has(addDaysISO(day.date,-1))){
+      day.title='Recovery — Day After Race'; day.note='Easy jog or full rest, let legs recover from race effort'; day.off=null;
+    }
+  }));
+}
+
 function openDayModal(idx){
   const r=currentRace(); const wk=r.weeks[state.selectedWeek-1]; const day=wk[idx];
   $('#dayModalTitle').textContent = day.day+', '+fmtDate(day.date);
@@ -626,6 +641,7 @@ function openDayModal(idx){
     } else {
       day.type=$('#fDayType').value; day.title=$('#fDayTitle').value; day.note=$('#fDayNote').value;
     }
+    reapplyRaceAdjacency(r); // if this edit added/removed a race, neighboring days react immediately
     $('#dayOverlay').classList.remove('show');
     render();
   };
