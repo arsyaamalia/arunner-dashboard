@@ -117,7 +117,7 @@
   table.pacetable td.p{font-weight:700;color:var(--teal-deep);}
 
   /* Log */
-  .logrow{display:grid;grid-template-columns:70px 1fr 80px 90px 90px 30px;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .logrow{display:grid;grid-template-columns:70px 1fr 74px 78px 84px 60px 30px;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line);font-size:12.5px;}
   .logrow.head{font-weight:800;color:var(--plum-soft);font-size:11px;border-bottom:1.5px solid var(--plum);}
   .logrow input{border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12.5px;width:100%;font-family:inherit;}
   .del-x{cursor:pointer;color:var(--coral-deep);font-weight:800;text-align:center;}
@@ -180,7 +180,7 @@
         <h2>Training log</h2>
         <div class="desc">Actual runs, matched against the plan. Edit or add entries — this seeds from your recent Strava activity.</div>
         <div class="logrow head">
-          <div>Date</div><div>Activity</div><div>Dist.</div><div>Time</div><div>Pace/km</div><div></div>
+          <div>Date</div><div>Activity</div><div>Dist.</div><div>Time</div><div>Pace/km</div><div>Avg HR</div><div></div>
         </div>
         <div id="logRows"></div>
         <button class="btn btn-ghost btn-sm" id="btnAddLog" style="margin-top:10px;">+ Add entry</button>
@@ -463,26 +463,51 @@ function genericTemplate(category, raceDate){
            'easy' = aerobic/zone2 volume, deliberately slow, excluded from pace prediction
            (mixing it in biases a Riegel-style curve toward being too pessimistic). */
 const STRAVA_SEED = [
-  {date:'2026-09-23', name:'Evening Easy Run', dist:5.154, timeSec:2402, effort:'easy'},
-  {date:'2026-09-20', name:'Hemaviton Action Run 2026 (yeyyy PB with HR 162)', dist:10.0, timeSec:4260, effort:'hard'}, // using Strava's Fastest 10K segment (71:00), not the whole 10.40km activity average
-  {date:'2026-09-19', name:'Sandwich Run @ Nude Bakery', dist:5.0, timeSec:2002, effort:'hard'}, // using Strava's Fastest 5K segment (33:22, a new PB) — this was tagged the "fun run" but she ran it hard
-  {date:'2026-09-18', name:'Shakeout Zone 2 Run', dist:3.038, timeSec:1475, effort:'easy'},
-  {date:'2026-09-18', name:'Strides Run (5x20s)', dist:0.417, timeSec:195, effort:'hard'},
-  {date:'2026-09-17', name:'anggep aja Long Run plz', dist:8.89, timeSec:3999, effort:'easy'},
-  {date:'2026-09-16', name:'Morning Interval Run (failed)', dist:1.87, timeSec:736, effort:'hard'},
-  {date:'2026-09-13', name:"Pasuruan Women's Run 2026", dist:4.30, timeSec:1803, effort:'hard'},
-  {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790, effort:'easy'},
-  {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944, effort:'hard'},
-  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.0, timeSec:2034, effort:'hard'}, // using Strava's Fastest 5K segment (33:54), not the whole 5.06km activity average (34:22) which is diluted by warmup
-  {date:'2026-09-04', name:'Morning Zone 2 Run (again)', dist:5.05, timeSec:2840, effort:'easy'},
-  {date:'2026-09-03', name:'Morning Interval Run', dist:2.75, timeSec:1026, effort:'hard'},
-  {date:'2026-09-02', name:'Morning Zone 2 Run', dist:5.06, timeSec:2768, effort:'easy'},
-  {date:'2026-08-30', name:'Lunch Run', dist:5.05, timeSec:2678, effort:'easy'},
-  {date:'2026-08-29', name:'Evening Run', dist:5.0, timeSec:2222, effort:'hard'}, // using Strava's Fastest 5K segment (37:02), not the whole 5.05km activity average
+  {date:'2026-10-08', name:'Morning Easy Run', dist:5.554, timeSec:2442, effort:'easy', avgHr:156, maxHr:166},
+  {date:'2026-10-07', name:'Morning Chair Pilates', dist:0, timeSec:1917, effort:'easy', avgHr:98, maxHr:127,kind:'pilates'},
+  {date:'2026-10-06', name:'Morning Interval Run', dist:2.295, timeSec:788, effort:'hard', avgHr:153, maxHr:175},
+  {date:'2026-10-04', name:'Morning Tempo Progressive Run', dist:5.0, timeSec:1929, effort:'hard', avgHr:168, maxHr:176}, // Strava Fastest 5K segment (32:09, new PB); whole run was 5.005km
+  {date:'2026-10-03', name:'Morning Zone 2 Run', dist:4.447, timeSec:2283, effort:'easy', avgHr:145, maxHr:156},
+  {date:'2026-10-01', name:'Morning Easy Run', dist:5.357, timeSec:2369, effort:'easy', avgHr:158, maxHr:166},
+  {date:'2026-09-30', name:'Lunch Core Pilates', dist:0, timeSec:4790, effort:'easy', avgHr:75, maxHr:111,kind:'pilates'},
+  {date:'2026-09-29', name:'Evening Interval Run', dist:1.849, timeSec:686, effort:'hard', avgHr:151, maxHr:169},
+  {date:'2026-09-27', name:'Morning Progressive Tempo Run', dist:5.0, timeSec:1968, effort:'hard', avgHr:167, maxHr:175}, // Strava Fastest 5K segment (32:48, PB); whole run was 5.054km
+  {date:'2026-09-26', name:'Morning Zone 2 Run', dist:4.544, timeSec:2384, effort:'easy', avgHr:143, maxHr:153},
+  {date:'2026-09-25', name:'Evening Medium Run', dist:5.657, timeSec:2330, effort:'easy', avgHr:162, maxHr:172},
+  {date:'2026-09-24', name:'Morning Interval Run', dist:2.717, timeSec:911, effort:'hard', avgHr:154, maxHr:177},
+  {date:'2026-09-24', name:'Interval warm-up', dist:0.46, timeSec:171, effort:'easy', avgHr:151, maxHr:161},
+  {date:'2026-09-23', name:'Evening Easy Run', dist:5.154, timeSec:2402, effort:'easy', avgHr:149, maxHr:158},
+  {date:'2026-09-20', name:'Hemaviton Action Run 2026 (yeyyy PB with HR 162)', dist:10.0, timeSec:4260, effort:'hard', avgHr:162, maxHr:174}, // Strava Fastest 10K segment (71:00), not the whole 10.40km activity average
+  {date:'2026-09-19', name:'Sandwich Run @ Nude Bakery', dist:5.0, timeSec:2002, effort:'hard', avgHr:165, maxHr:175}, // Strava Fastest 5K segment (33:22, PB)
+  {date:'2026-09-18', name:'Shakeout Zone 2 Run', dist:3.038, timeSec:1475, effort:'easy', avgHr:144, maxHr:150},
+  {date:'2026-09-18', name:'Strides Run (5x20s)', dist:0.417, timeSec:195, effort:'hard', avgHr:125, maxHr:152},
+  {date:'2026-09-17', name:'anggep aja Long Run plz', dist:8.89, timeSec:3999, effort:'easy', avgHr:162, maxHr:174},
+  {date:'2026-09-16', name:'Morning Interval Run (failed)', dist:1.87, timeSec:736, effort:'hard', avgHr:156, maxHr:173},
+  {date:'2026-09-13', name:'Pasuruan Women\'s Run 2026', dist:4.3, timeSec:1803, effort:'hard', avgHr:167, maxHr:179},
+  {date:'2026-09-11', name:'Morning Zone 2 Run', dist:5.06, timeSec:2790, effort:'easy', avgHr:146, maxHr:155},
+  {date:'2026-09-09', name:'Morning Interval Run', dist:2.61, timeSec:944, effort:'hard', avgHr:150, maxHr:172},
+  {date:'2026-09-08', name:'Afternoon Pilates', dist:0, timeSec:3937, effort:'easy', avgHr:79, maxHr:104,kind:'pilates'},
+  {date:'2026-09-06', name:'Morning Tempo Run (YEYYY PB)', dist:5.0, timeSec:2034, effort:'hard', avgHr:164, maxHr:174}, // Strava Fastest 5K segment (33:54)
+  {date:'2026-09-04', name:'Morning Zone 2 Run (again)', dist:5.05, timeSec:2840, effort:'easy', avgHr:148, maxHr:154},
+  {date:'2026-09-03', name:'Morning Interval Run', dist:2.75, timeSec:1026, effort:'hard', avgHr:153, maxHr:176},
+  {date:'2026-09-02', name:'Morning Zone 2 Run', dist:5.06, timeSec:2768, effort:'easy', avgHr:148, maxHr:155},
+  {date:'2026-08-30', name:'Lunch Run', dist:5.05, timeSec:2678, effort:'easy', avgHr:155, maxHr:169},
+  {date:'2026-08-29', name:'Evening Run', dist:5.0, timeSec:2222, effort:'hard', avgHr:160, maxHr:172}, // Strava Fastest 5K segment (37:02)
+  {date:'2026-08-27', name:'Evening Zone 2 Run', dist:5.05, timeSec:3353, effort:'easy', avgHr:149, maxHr:157},
+  {date:'2026-08-23', name:'Evening Run', dist:2.51, timeSec:1127, effort:'easy', avgHr:153, maxHr:165},
+  {date:'2026-08-22', name:'Morning Elevation Run', dist:5.05, timeSec:2245, effort:'hard', avgHr:166, maxHr:177}, // hilly, +100m
+  {date:'2026-08-20', name:'Morning Interval Run', dist:2.4, timeSec:893, effort:'hard', avgHr:155, maxHr:175},
+  {date:'2026-08-19', name:'Zone 2 Run again', dist:5.05, timeSec:3067, effort:'easy', avgHr:149, maxHr:156},
+  {date:'2026-08-16', name:'Evening Zone 2 Run', dist:5.055, timeSec:2757, effort:'easy', avgHr:147, maxHr:155},
+  {date:'2026-08-15', name:'Morning Interval Run', dist:2.108, timeSec:720, effort:'hard', avgHr:158, maxHr:173},
+  {date:'2026-08-13', name:'Road to Soerabaja 10K Mlayu Bareng', dist:5.036, timeSec:2270, effort:'hard', avgHr:159, maxHr:175}, // group run
+  {date:'2026-08-09', name:'Morning Run', dist:5.054, timeSec:2105, effort:'hard', avgHr:165, maxHr:175},
+  {date:'2026-08-05', name:'Evening Run', dist:5.056, timeSec:2806, effort:'easy', avgHr:147, maxHr:153},
+  {date:'2026-08-02', name:'Morning Run', dist:5.0, timeSec:2085, effort:'hard', avgHr:166, maxHr:177}, // Strava Fastest 5K segment (34:45); whole run 5.055km
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 10; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 11; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -619,7 +644,9 @@ function renderDayList(){
   const curWeek = weekIndexForToday(r);
   const isPastWeek = state.selectedWeek < curWeek;
   wk.forEach((day,idx)=>{
-    const logged = r.log.find(l=>l.date===day.date);
+    const dayLogs = r.log.filter(l=>l.date===day.date);
+    const logged = dayLogs.filter(l=>l.kind!=='pilates').sort((a,b)=>b.dist-a.dist)[0] || null;
+    const pilLogged = dayLogs.find(l=>l.kind==='pilates');
     const el=document.createElement('div');
     el.className='daycard';
     let displayType=day.type, displayTitle=day.title, displayNote=day.note||'';
@@ -627,7 +654,7 @@ function renderDayList(){
       if(logged){
         const pace = logged.timeSec/logged.dist;
         displayType='run'; displayTitle=logged.name;
-        displayNote=logged.dist.toFixed(2)+'km in '+secToMMSS(logged.timeSec)+' ('+secToMMSS(pace)+'/km) — actual, not planned';
+        displayNote=logged.dist.toFixed(2)+'km in '+secToMMSS(logged.timeSec)+' ('+secToMMSS(pace)+'/km)'+(logged.avgHr?', avg HR '+Math.round(logged.avgHr):'')+' — actual, not planned';
       } else {
         displayType='rest'; displayTitle='Rest'; displayNote='No activity logged this day';
       }
@@ -640,7 +667,7 @@ function renderDayList(){
         <span class="title">${displayTitle}</span>
         <div class="note">${displayNote}</div>
       </div>
-      <div>${(!isPastWeek && logged)? `<span class="logged-badge">✓ ${logged.dist}km logged</span>` : ''}</div>
+      <div>${(!isPastWeek && day.type==='run' && logged)? `<span class="logged-badge">✓ ${logged.dist}km logged</span>` : ''}${(!isPastWeek && (day.type==='pilates'||day.type==='strength') && pilLogged)? `<span class="logged-badge">✓ Pilates done</span>` : ''}</div>
     `;
     el.onclick=()=>openDayModal(idx);
     box.appendChild(el);
@@ -757,11 +784,13 @@ function renderLog(){
   const r=currentRace(); const box=$('#logRows'); box.innerHTML='';
   const sorted=[...r.log].sort((a,b)=> a.date<b.date?1:-1);
   sorted.forEach(l=>{
-    const pace = l.timeSec/l.dist;
+    const isPil = l.kind==='pilates' || !(l.dist>0);
+    const pace = isPil? 0 : l.timeSec/l.dist;
     const planDay = r.weeks.flat().find(x=>x.date===l.date);
     let matchHtml='<span class="match-none">unplanned</span>';
     if(planDay){
-      if(planDay.type==='run') matchHtml='<span class="match-ok">matches plan</span>';
+      if(isPil) matchHtml = planDay.type==='pilates'||planDay.type==='strength' ? '<span class="match-ok">matches plan</span>' : '<span class="match-off">plan said '+planDay.type+'</span>';
+      else if(planDay.type==='run') matchHtml='<span class="match-ok">matches plan</span>';
       else matchHtml='<span class="match-off">plan said '+planDay.type+'</span>';
     }
     const el=document.createElement('div');
@@ -769,9 +798,10 @@ function renderLog(){
     el.innerHTML=`
       <div>${fmtDate(l.date)}</div>
       <div>${l.name}<br><span style="font-size:10.5px;color:var(--plum-soft);">${matchHtml}</span></div>
-      <div>${l.dist.toFixed(2)}km</div>
+      <div>${isPil? 'Pilates' : l.dist.toFixed(2)+'km'}</div>
       <div>${secToMMSS(l.timeSec)}</div>
-      <div>${secToMMSS(pace)}/km</div>
+      <div>${isPil? '-' : secToMMSS(pace)+'/km'}</div>
+      <div>${l.avgHr? Math.round(l.avgHr)+' bpm' : '-'}</div>
       <div class="del-x">✕</div>
     `;
     el.querySelector('.del-x').onclick=()=>{ r.log=r.log.filter(x=>x.id!==l.id); render(); };
