@@ -420,12 +420,12 @@ const JRF_5K_WEEKS = [
   d('Thu','2026-10-15','run','Easy Run 8K','1:30/km slower than 5K pace',90),
   {...d('Fri','2026-10-16','rest','Rest','Rest day, shin splints are sore. Skip running, ice and keep walking easy.',null), userEdited:true, locked:true},
   {...d('Sat','2026-10-17','run','Zone 2 Run 5K','HR zone 2, easy conversational pace, protect the shins',90), userEdited:true, locked:true},
-  {...d('Sun','2026-10-18','run','Progressive Tempo 5K (final)','Last progressive run before race day, controlled build toward goal pace, not all-out',0), userEdited:true, locked:true} ],
+  {...d('Sun','2026-10-18','run','Progressive 3K (final tempo)','1.5K easy, then 3K getting faster each km: 6:10, 6:00, 5:55, then 1K easy. HR under 168. Not a PB attempt. Swap to easy 3K or rest if the shin hurts on Saturday.',0), userEdited:true, locked:true} ],
 [ {...d('Mon','2026-10-19','pilates','Pilates — Reformer LV1','Reformer LV1 · 11.00 · slow controlled tempo, gentle on the shins, 5 days before race. Skip Cardio, Chair and Tower this week',null), userEdited:true, locked:true},
-  d('Tue','2026-10-20','run','Threshold Run','2K x2 at 5K pace',0),
-  d('Wed','2026-10-21','run','Easy Run 6K','1:30/km slower than 5K pace',90),
-  d('Thu','2026-10-22','rest','Rest','Taper — no strength this week',null),
-  d('Fri','2026-10-23','run','Shake Out Run 3K','HR zone 2, carbo-load, early night',null),
+  {...d('Tue','2026-10-20','run','Race-Pace Test 2 x 1K @ 5:55','2K easy, then 2 x 1000m at 5:55/km with 2 min rest, 4 strides, 1K easy. Pass: controlled, HR under 165. This is the key test for sub-30.',0), userEdited:true, locked:true},
+  {...d('Wed','2026-10-21','run','Easy Run 3.8K + 4 strides','Very easy, zone 2, then 4 x 20s relaxed strides. Early night.',90), userEdited:true, locked:true},
+  {...d('Thu','2026-10-22','rest','Rest + travel (night bus)','Bus 16:30 to Jakarta. Carb-load with familiar food, drink water, walk at every stop.',null), userEdited:true, locked:true},
+  {...d('Fri','2026-10-23','run','Shakeout 2-3K + 4 strides','Around 07:30 after sleeping in, not straight off the bus. Then nap, carbs, bed before 20:00.',null), userEdited:true, locked:true},
   d('Sat','2026-10-24','race','RACE DAY','myBCA Jakarta Running Fest 2026 — 5K',null) ],
 ];
 
@@ -512,7 +512,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 13; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 14; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
