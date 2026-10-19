@@ -420,7 +420,7 @@ const JRF_5K_WEEKS = [
   d('Thu','2026-10-15','run','Easy Run 8K','1:30/km slower than 5K pace',90),
   {...d('Fri','2026-10-16','rest','Rest','Rest day, shin splints are sore. Skip running, ice and keep walking easy.',null), userEdited:true, locked:true},
   {...d('Sat','2026-10-17','run','Zone 2 Run 4K (done)','Done: 4.05km at 8:11/km, avg HR 145, shin pain gone. Planned 5K, cut to 4K on purpose.',90), userEdited:true, locked:true},
-  {...d('Sun','2026-10-18','run','Progressive 3K (final tempo)','1.5K easy, then 3K getting faster each km: 6:10, 6:00, 5:55, then 1K easy. HR under 168. Not a PB attempt. Swap to easy 3K or rest if the shin hurts on Saturday.',0), userEdited:true, locked:true} ],
+  {...d('Sun','2026-10-18','run','Last Tempo 3K (done)','Done: 3.04km at 5:54/km, avg HR 164, max 173. Fastest 1K 5:51.',0), userEdited:true, locked:true} ],
 [ {...d('Mon','2026-10-19','pilates','Pilates — Reformer LV1','Reformer LV1 · 11.00 · slow controlled tempo, gentle on the shins, 5 days before race. Skip Cardio, Chair and Tower this week',null), userEdited:true, locked:true},
   {...d('Tue','2026-10-20','run','Race-Pace Test 2 x 1K @ 5:55','2K easy, then 2 x 1000m at 5:55/km with 2 min rest, 4 strides, 1K easy. Pass: controlled, HR under 165. This is the key test for sub-30.',0), userEdited:true, locked:true},
   {...d('Wed','2026-10-21','run','Easy Run 3.8K + 4 strides','Very easy, zone 2, then 4 x 20s relaxed strides. Early night.',90), userEdited:true, locked:true},
@@ -463,6 +463,8 @@ function genericTemplate(category, raceDate){
            'easy' = aerobic/zone2 volume, deliberately slow, excluded from pace prediction
            (mixing it in biases a Riegel-style curve toward being too pessimistic). */
 const STRAVA_SEED = [
+  {date:'2026-10-19', name:'Morning Reformer Pilates', dist:0, timeSec:2754, effort:'easy', avgHr:71, maxHr:88, kind:'pilates'},
+  {date:'2026-10-18', name:'Morning Last Tempo Run', dist:3.038, timeSec:1076, effort:'hard', avgHr:164, maxHr:173}, // 5:54/km for 3K, fastest 1K 5:51
   {date:'2026-10-17', name:'Morning Zone 2 Run', dist:4.048, timeSec:1986, effort:'easy', avgHr:145, maxHr:152},
   {date:'2026-10-15', name:'Morning Easy Run', dist:5.752, timeSec:2548, effort:'easy', avgHr:154, maxHr:165},
   {date:'2026-10-14', name:'Morning Chair Pilates', dist:0, timeSec:3557, effort:'easy', avgHr:87, maxHr:122, kind:'pilates'},
@@ -513,7 +515,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 15; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 16; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
