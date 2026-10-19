@@ -422,10 +422,10 @@ const JRF_5K_WEEKS = [
   {...d('Sat','2026-10-17','run','Zone 2 Run 4K (done)','Done: 4.05km at 8:11/km, avg HR 145, shin pain gone. Planned 5K, cut to 4K on purpose.',90), userEdited:true, locked:true},
   {...d('Sun','2026-10-18','run','Last Tempo 3K (done)','Done: 3.04km at 5:54/km, avg HR 164, max 173. Fastest 1K 5:51.',0), userEdited:true, locked:true} ],
 [ {...d('Mon','2026-10-19','pilates','Pilates — Reformer LV1','Reformer LV1 · 11.00 · slow controlled tempo, gentle on the shins, 5 days before race. Skip Cardio, Chair and Tower this week',null), userEdited:true, locked:true},
-  {...d('Tue','2026-10-20','run','Race-Pace Test 2 x 1K @ 5:55','2K easy, then 2 x 1000m at 5:55/km with 2 min rest, 4 strides, 1K easy. Pass: controlled, HR under 165. This is the key test for sub-30.',0), userEdited:true, locked:true},
-  {...d('Wed','2026-10-21','run','Easy Run 3.8K + 4 strides','Very easy, zone 2, then 4 x 20s relaxed strides. Early night.',90), userEdited:true, locked:true},
-  {...d('Thu','2026-10-22','rest','Rest + travel (night bus)','Bus 16:30 to Jakarta. Carb-load with familiar food, drink water, walk at every stop.',null), userEdited:true, locked:true},
-  {...d('Fri','2026-10-23','run','Shakeout 2-3K + 4 strides','Around 07:30 after sleeping in, not straight off the bus. Then nap, carbs, bed before 20:00.',null), userEdited:true, locked:true},
+  {...d('Tue','2026-10-20','run','Zone 2 3K + 4 strides','Easy 3K at HR 140-150, then 4 x 20s relaxed strides. No hard test: the 5:54 3K on Oct 18 already proved the pace.',90), userEdited:true, locked:true},
+  {...d('Wed','2026-10-21','rest','Rest (no run)','Full rest between runs. Carbs, water, early night.',null), userEdited:true, locked:true},
+  {...d('Thu','2026-10-22','run','Zone 2 3K + 4 strides, then night bus','Easy 3K at 05:00, 4 x 20s strides, then carb-load. Bus 16:30 to Jakarta. Last run before the race.',90), userEdited:true, locked:true},
+  {...d('Fri','2026-10-23','rest','Rest + easy evening walk','No run: arrive 03:15 and Jakarta is too hot after 06:30. Sleep, carbs, 15 min walk in the evening, bed before 20:00.',null), userEdited:true, locked:true},
   d('Sat','2026-10-24','race','RACE DAY','myBCA Jakarta Running Fest 2026 — 5K',null) ],
 ];
 
@@ -515,7 +515,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 16; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 17; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
