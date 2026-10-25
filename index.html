@@ -426,7 +426,7 @@ const JRF_5K_WEEKS = [
   {...d('Wed','2026-10-21','rest','Rest (no run)','Full rest between runs. Carbs, water, early night.',null), userEdited:true, locked:true},
   {...d('Thu','2026-10-22','run','Zone 2 run (done), then night bus','Done: 2.22km at 7:53/km, avg HR 146, max 151. Last run before the race, cut short on purpose. Bus 16:30 to Jakarta.',90), userEdited:true, locked:true},
   {...d('Fri','2026-10-23','rest','Rest + racepack pickup (morning)','No run. Arrive 03:15, sleep. RPC opens 10:00 at Istora Senayan (Upper Level), AREA 2, Counter 4, bib P61065. Bring QR code + photo ID. No 5K pickup on race day, so this is the only chance. Pick up right at opening, go straight home. Nap 1.5-2h, carbs, prep gear, bed before 20:00.',null), userEdited:true, locked:true},
-  {...d('Sat','2026-10-24','race','RACE DAY (done)','JRF 2026 5K official: chip time 29:40, gun time 29:49. Sub-30 achieved. Watch: 5.06km in 29:46 moving (5:53/km), avg HR 172, max 179. Fastest 5K inside the run: 29:26.',null), userEdited:true, locked:true} ],
+  {...d('Sat','2026-10-24','race','RACE DAY (done)','JRF 2026 5K official: chip time 29:40, gun time 29:49. Sub-30 achieved. Watch: 5.06km in 29:46 moving (5:53/km), avg HR 172, max 179. Fastest 5K inside the run: 29:26. Overall place 362.',null), userEdited:true, locked:true} ],
 ];
 
 function genericTemplate(category, raceDate){
@@ -518,7 +518,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 22; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 23; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
@@ -950,8 +950,17 @@ function personalizedPrediction(race, raceDistKm){
   const residSD = pts.length>1 ? Math.sqrt(sse/sw) : 0.03; // in log-space, used for the confidence range either way
 
   if(directHit){
-    const predictedSec = riegel(directHit.timeSec, directHit.dist, raceDistKm); // near-1.0 extrapolation since directHit.dist ≈ raceDistKm
-    return { method:'direct-pb', n:bests.length, predictedSec, exponent:b, residSD, anchor:directHit };
+    let predictedSec = riegel(directHit.timeSec, directHit.dist, raceDistKm); // near-1.0 extrapolation since directHit.dist ≈ raceDistKm
+    // A same-distance PB can be stale. If a clearly shorter hard effort implies a faster time
+    // (extrapolated with a steeper 1.08 exponent to be conservative about endurance), use that instead.
+    let shorterBest = null;
+    bests.forEach(sb=>{
+      if(sb!==directHit && sb.dist < directHit.dist*0.9 && sb.dist >= raceDistKm*0.49 && !/interval/i.test(sb.name||"")){
+        const t = sb.timeSec*Math.pow(raceDistKm/sb.dist,1.08);
+        if(t < predictedSec){ predictedSec = t; shorterBest = sb; }
+      }
+    });
+    return { method:'direct-pb', n:bests.length, predictedSec, exponent:b, residSD, anchor:directHit, shorterBest };
   }
   const predictedSec = Math.exp(a + b*Math.log(raceDistKm));
   return { method:'regression', n:bests.length, predictedSec, exponent:b, residSD };
@@ -977,6 +986,9 @@ function renderMode(){
       methodBox = `<b>Method:</b> your own best effort already at (or very near) ${raceDistKm}K — <b>${pred.anchor.name}</b> on ${fmtDate(pred.anchor.date)} (${pred.anchor.dist.toFixed(2)}km in ${secToMMSS(pred.anchor.timeSec)}). This is used directly rather than a fitted curve, because a proven result at this exact distance beats any extrapolation from other distances.
         <br><br>Your personalized pace-vs-distance curve (from ${pred.n} personal bests across different distances, exponent ${pred.exponent.toFixed(2)}) is used only to set the confidence range above, based on how consistent your pacing has been across distances so far.
         <br><br>This is a training-based estimate, not a guarantee — race-day pacing, weather, and course elevation will move the real number.`;
+      if(pred.shorterBest){
+        methodBox += `<br><br><b>Note:</b> your ${raceDistKm}K result is older than a stronger shorter effort, so this estimate comes from <b>${pred.shorterBest.name}</b> (${pred.shorterBest.dist.toFixed(2)}km in ${secToMMSS(pred.shorterBest.timeSec)}, ${fmtDate(pred.shorterBest.date)}), extrapolated with a conservative exponent. It assumes you have the endurance for the longer distance, which your training volume may not yet support.`;
+      }
     } else if(pred.method==='regression'){
       const lo = Math.exp(Math.log(predictedSec) - pred.residSD);
       const hi = Math.exp(Math.log(predictedSec) + pred.residSD);
