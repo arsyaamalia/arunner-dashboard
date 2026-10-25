@@ -424,9 +424,9 @@ const JRF_5K_WEEKS = [
 [ {...d('Mon','2026-10-19','pilates','Pilates — Reformer LV1','Reformer LV1 · 11.00 · slow controlled tempo, gentle on the shins, 5 days before race. Skip Cardio, Chair and Tower this week',null), userEdited:true, locked:true},
   {...d('Tue','2026-10-20','run','Zone 2 3K (done)','Done: 3.04km at 8:04/km, avg HR 145, max 154.',90), userEdited:true, locked:true},
   {...d('Wed','2026-10-21','rest','Rest (no run)','Full rest between runs. Carbs, water, early night.',null), userEdited:true, locked:true},
-  {...d('Thu','2026-10-22','run','Zone 2 3K + 4 strides, then night bus','Easy 3K at 05:00, 4 x 20s strides, then carb-load. Bus 16:30 to Jakarta. Last run before the race.',90), userEdited:true, locked:true},
+  {...d('Thu','2026-10-22','run','Zone 2 run (done), then night bus','Done: 2.22km at 7:53/km, avg HR 146, max 151. Last run before the race, cut short on purpose. Bus 16:30 to Jakarta.',90), userEdited:true, locked:true},
   {...d('Fri','2026-10-23','rest','Rest + racepack pickup (morning)','No run. Arrive 03:15, sleep. RPC opens 10:00 at Istora Senayan (Upper Level), AREA 2, Counter 4, bib P61065. Bring QR code + photo ID. No 5K pickup on race day, so this is the only chance. Pick up right at opening, go straight home. Nap 1.5-2h, carbs, prep gear, bed before 20:00.',null), userEdited:true, locked:true},
-  d('Sat','2026-10-24','race','RACE DAY','myBCA Jakarta Running Fest 2026 — 5K',null) ],
+  {...d('Sat','2026-10-24','race','RACE DAY (done)','JRF 2026 5K: 5.06km in 29:46 moving (5:53/km), avg HR 172, max 179. Fastest 5K inside the run: 29:26. Sub-30 achieved on the watch.',null), userEdited:true, locked:true} ],
 ];
 
 function genericTemplate(category, raceDate){
@@ -463,6 +463,8 @@ function genericTemplate(category, raceDate){
            'easy' = aerobic/zone2 volume, deliberately slow, excluded from pace prediction
            (mixing it in biases a Riegel-style curve toward being too pessimistic). */
 const STRAVA_SEED = [
+  {date:'2026-10-24', name:'JRF 2026 Samsung Galaxy 5K', dist:5.057, timeSec:1786, effort:'hard', avgHr:172, maxHr:179}, // race: 5:53/km, fastest 5K 29:26
+  {date:'2026-10-22', name:'Morning Zone 2 Run', dist:2.224, timeSec:1052, effort:'easy', avgHr:146, maxHr:151},
   {date:'2026-10-20', name:'Morning Zone 2 Run', dist:3.038, timeSec:1470, effort:'easy', avgHr:145, maxHr:154},
   {date:'2026-10-19', name:'Morning Reformer Pilates', dist:0, timeSec:2754, effort:'easy', avgHr:71, maxHr:88, kind:'pilates'},
   {date:'2026-10-18', name:'Morning Last Tempo Run', dist:3.038, timeSec:1076, effort:'hard', avgHr:164, maxHr:173}, // 5:54/km for 3K, fastest 1K 5:51
@@ -516,7 +518,7 @@ const STRAVA_SEED = [
 ];
 
 /* ---------- App state ---------- */
-const SCHEMA_VERSION = 20; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
+const SCHEMA_VERSION = 21; // bump this whenever base plan/log data changes, so stale localStorage cache doesn't hide the update
 let state = {
   schemaVersion: SCHEMA_VERSION,
   activeRaceId: 'jrf2026',
